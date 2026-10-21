@@ -48,7 +48,7 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Ouvrir une Pull Request
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v8
         with:
           branch: claude/auto-${{ github.run_id }}
           title: "Claude : ${{ github.event.inputs.prompt || github.event.issue.title }}"
