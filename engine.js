@@ -457,7 +457,7 @@ function terminerSaisonRegulier(entree){
   const s=genererSaisonRegliere(reussis,etat.matchsResultats.length,moyenne);
   if(fac){ const ng=estLycee()?24:32; s.v=Math.round(s.v*ng/82); s.d=ng-s.v; }
   etat.saisonSport={v:s.v,d:s.d,rang:s.rang,qualifie:s.rang<=8};
-  if(!fac) etat.statsSaison=calculerStatsSaison(evenements.some(x=>x.startsWith('Blessure')),reussis);
+  if(!fac) etat.statsSaison=calculerStatsSaison(evenements.some(x=>x.startsWith('Blessure')),reussis,etat.matchsResultats.length);
   etat.evenementsSaison=evenements;
   etat.medailleSaison=medaille;
   etat.reussisReg=reussis;
@@ -470,13 +470,15 @@ function terminerSaisonRegulier(entree){
 /* ---------- Ligne statistique de la saison (points, rebonds, passes, matchs sur 82) ---------- */
 const BONUS_REB={'Pivot':4.5,'Ailier fort':3,'Ailier':0.8,'Arrière':-0.8,'Meneur':-1.6};
 const BONUS_PAS={'Meneur':2.5,'Arrière':0.6,'Ailier':0.3,'Ailier fort':-0.4,'Pivot':-0.6};
-function calculerStatsSaison(blesse,reussis){
+function calculerStatsSaison(blesse,reussis,total){
   const s=etat.stats, place=etat.meta.place, ng=82;
   const mpg=minutesJeu(place)*(0.96+Math.random()*0.08);
-  const u=0.85+place/100*0.3, bruit=()=>0.92+Math.random()*0.16;
-  const p36=clamp(5+(s.scoring-40)*0.42,3,38)*u*bruit();
-  const r36=clamp(3.2+(s.athletisme-40)*0.06+(s.defense-40)*0.05+(BONUS_REB[etat.poste]||0),1.5,16)*bruit();
-  const a36=clamp(1+(s.playmaking-40)*0.16+(BONUS_PAS[etat.poste]||0)+(s.basketIQ-50)*0.02,0.4,13)*bruit();
+  const u=0.92+place/1000, bruit=()=>0.94+Math.random()*0.12;
+  const perf=1+clamp(((total?reussis/total:0.5)-0.5)*0.24,-0.12,0.12);
+  /* Repères pour un joueur à 34 min : scoring 50 ≈ 9 pts, 70 ≈ 19, 85 ≈ 30, 95 ≈ 35. */
+  const p36=clamp(9+(s.scoring-50)*0.55,2,40)*u*perf*bruit();
+  const r36=clamp(3.2+(s.athletisme-40)*0.07+(s.defense-40)*0.06+(BONUS_REB[etat.poste]||0),1.5,18)*perf*bruit();
+  const a36=clamp(1+(s.playmaking-40)*0.18+(BONUS_PAS[etat.poste]||0)+(s.basketIQ-50)*0.02,0.4,15)*perf*bruit();
   const manques=blesse?Math.round(ng*(0.2+Math.random()*0.35)):Math.round(ng*Math.random()*0.07+etat.meta.risqueBlessure/100*ng*0.08);
   const r1_=v=>Math.round(v*10)/10;
   return {gp:Math.max(0,ng-manques),ng,manques,blesse:!!blesse,min:r1_(mpg),pts:r1_(p36*mpg/36),reb:r1_(r36*mpg/36),ast:r1_(a36*mpg/36),placeAvant:place,trophees:[]};
@@ -572,7 +574,7 @@ function finaliserSaison(stade){
     if(etat.saison===1&&pl>=40&&st_.pts>=9&&Math.random()<clamp((moy-52)/45,0,0.6)) add(__("Rookie de l'année"));
     if(etat.stats.defense>=76&&pl>=55&&Math.random()<clamp((etat.stats.defense-70)/55,0,0.45)) add(__("Défenseur de l'année"));
     if(roleIdx(pl)<=2&&pl>=38&&moy>=64&&Math.random()<0.25) add(__("Meilleur sixième homme"));
-    if(st_.pts>=26&&Math.random()<clamp((st_.pts-24)/8,0,0.7)) add(__("Meilleur marqueur de la ligue"));
+    if(st_.pts>=28&&Math.random()<clamp((st_.pts-27)/6,0.1,0.7)) add(__("Meilleur marqueur de la ligue"));
     if(stade===5&&pl>=62&&Math.random()<0.4) add(__("MVP des Finales"));
   }
   const ss=etat.saisonSport||{v:41,d:41,rang:8};
