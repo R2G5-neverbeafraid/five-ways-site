@@ -16,10 +16,16 @@ permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  group: claude-auto
+  cancel-in-progress: false
+
 jobs:
   claude:
-    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'claude'
+    # Réservé au propriétaire du dépôt : personne d'autre ne peut déclencher Claude ni consommer la clé API.
+    if: github.actor == github.repository_owner && (github.event_name == 'workflow_dispatch' || github.event.label.name == 'claude')
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Récupérer le code
         uses: actions/checkout@v4

@@ -72,7 +72,7 @@ function renderDraftNight(){
 function attacherDraftNight(){
   document.getElementById('btn-rejoindre').onclick=()=>{ etat.phase='jeu'; genererTour(); sauvegarder(); render(); };
 }
-const PAYS=[['RDC','CD'],['France','FR'],['USA','US'],['Cameroun','CM'],['Sénégal','SN'],['Nigeria','NG'],['Canada','CA'],['Espagne','ES'],['Serbie','RS'],['Brésil','BR'],['Angola','AO'],['Autre','--']];
+const PAYS=[['RDC','CD'],['France','FR'],['USA','US'],['Cameroun','CM'],['Sénégal','SN'],['Nigeria','NG'],['Canada','CA'],['Espagne','ES'],['Serbie','RS'],['Brésil','BR'],['Japon','JP'],['Angola','AO'],['Autre','--']];
 const DOMINANTE={'Meneur':'PLA','Arrière':'SCO','Ailier':'ATH','Ailier fort':'DEF','Pivot':'IQ'};
 const GABARITS={
   'Longiligne':{desc:'Bras longs, explosif, moins de masse',bonus:{athletisme:4,defense:1},malus:{playmaking:-3}},
@@ -165,7 +165,7 @@ function renderTour(){
       <span class="puce" style="background:${f.couleur}"></span>
       <span class="meta">Saison ${etat.saison}</span>
       <span class="meta">${etat.age} ans</span>
-      <span class="meta">${f.ville} ${f.nom}</span>
+      <span class="meta">${escapeHtml(f.ville)} ${escapeHtml(f.nom)}</span>
     </div>
     ${etat.scenarioActuel?`<h1 class="titre-ecran">${escapeHtml(etat.scenarioActuel.question)}</h1><p class="flavor">${escapeHtml(etat.scenarioActuel.contexte)}</p>`:`<p class="flavor">${texteFlavor()}</p>`}
     <div class="pile-choix">${etat.tourActuel.map((c,i)=>carteChoixHtml(c,i)).join('')}</div>
@@ -204,7 +204,7 @@ function renderMatch(){
       <span class="puce" style="background:${f.couleur}"></span>
       <span class="meta">Saison ${etat.saison}</span>
       <span class="meta">${etat.age} ans</span>
-      <span class="meta">${f.ville} ${f.nom}</span>
+      <span class="meta">${escapeHtml(f.ville)} ${escapeHtml(f.nom)}</span>
     </div>
     <p class="logo">EN PLEIN MATCH — SITUATION ${etat.matchsResultats.length+1}/${etat.matchsTotal}</p>
     <h1 class="titre-ecran">${escapeHtml(m.titre)}</h1>
@@ -236,7 +236,7 @@ function renderResultat(){
       <span class="puce" style="background:${f.couleur}"></span>
       <span class="meta">Saison ${etat.saison}</span>
       <span class="meta">${etat.age} ans</span>
-      <span class="meta">${f.ville} ${f.nom}</span>
+      <span class="meta">${escapeHtml(f.ville)} ${escapeHtml(f.nom)}</span>
     </div>
     <p class="flavor">Intersaison :</p>
     <div style="border:1px solid ${COULEURS_AXES[r.axe]||'var(--border)'};background:color-mix(in srgb,${COULEURS_AXES[r.axe]||'#26345A'} 12%,var(--surface));border-radius:12px;padding:14px 15px"><h1 class="titre-ecran" style="font-size:20px">${escapeHtml(r.texteChoix)}</h1></div>
@@ -273,6 +273,7 @@ function renderRetraite(){
       ${d.titres?`<span class="badge">${d.titres} titre${d.titres>1?'s':''}</span>`:''}
       ${d.allStar?`<span class="badge">${d.allStar}× All-Star</span>`:''}
       ${d.mvp?`<span class="badge">${d.mvp}× MVP</span>`:''}
+      ${d.medailles?`<span class="badge">${d.medailles} pts de médailles</span>`:''}
     </div>
     <button id="btn-partager" class="bouton">Partager</button>
     <button id="btn-rejouer" class="bouton" style="background:var(--surface);color:var(--text);border:1px solid var(--border)">Nouvelle carrière</button>
