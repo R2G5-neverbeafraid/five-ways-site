@@ -64,7 +64,7 @@ function renderDraftNight(){
       <div class="titre-ecran" style="font-size:24px">${escapeHtml(f.ville)} ${escapeHtml(f.nom)}</div>
       <div style="font-size:13px;color:var(--text-muted);margin-top:6px">Tu rejoins la franchise à ${etat.age} ans.</div>
     </div>
-    <div style="display:flex;gap:10px">${caseStat('OVR',ovr)}${caseStat('POSTE',escapeHtml(etat.poste.toUpperCase().slice(0,3)))}${caseStat('MAILLOT','#'+(etat.numero!==undefined?etat.numero:'—'))}</div>
+    <div style="display:flex;gap:10px">${caseStat('OVR',ovr)}${caseStat('POSTE',escapeHtml(etat.poste.toUpperCase().slice(0,3)))}${etat.pays?caseStat('PAYS',escapeHtml((PAYS.find(p=>p[0]===etat.pays)||['','--'])[1])):''}${caseStat('MAILLOT','#'+(etat.numero!==undefined?etat.numero:'—'))}</div>
     ${rivs.length?`<div class="rival-card" style="background:#2A1820"><p class="rival-titre">RIVALITÉS HISTORIQUES</p>${rivs.map(r=>`<p class="rival-ligne"><span style="color:#E5484D;letter-spacing:2px">${pastilles(r.niveau)}</span> ${escapeHtml(r.nom)} — ${escapeHtml(r.detail)}</p>`).join('')}</div>`:''}
     <button id="btn-rejoindre" class="bouton">COMMENCER LA SAISON 1</button>
   </div>`;

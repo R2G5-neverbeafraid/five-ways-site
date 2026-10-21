@@ -329,6 +329,16 @@ const SCENARIOS=[
     c('Vie perso','Partir en voyage pour recharger les batteries',{risqueBlessure:-6,alchimieEquipe:2}),
     c('Risque / Legacy','Défier un rival lors d\'un camp d\'été public',{reputation:5,risqueBlessure:3})
   ]},
+  {id:'selection',generique:false,cond:e=>e.saison>=3&&e.saison%3===0&&!!e.pays&&e.pays!=='Autre',
+   question:'La sélection nationale t\'appelle : que réponds-tu ?',
+   contexte:e=>`Le sélectionneur de ${e.pays} compte sur toi pour la prochaine fenêtre internationale. Ton pays t'attend, ta franchise aussi.`,
+   choix:e=>[
+    c('Performance','Rejoindre le stage de préparation et jouer tous les matchs',{playmaking:2,defense:2,risqueBlessure:2}),
+    c('Carrière / Contrat','Négocier avec ta franchise un calendrier adapté',{coteEquipe:3,reputation:1}),
+    c('Image / Marque',`Porter fièrement les couleurs de ${e.pays} sur tes réseaux`,{reputation:5}),
+    c('Vie perso','Profiter du voyage pour retrouver ta famille et tes amis au pays',{alchimieEquipe:3,risqueBlessure:-4}),
+    c('Risque / Legacy','Enchaîner saison et sélection sans aucun repos',{reputation:4,scoring:2,risqueBlessure:5})
+  ]},
   {id:'champion2',generique:false,cond:e=>e.bilan&&e.bilan.titre,
    question:'Tu es sur le toit de la ligue : comment restes-tu affamé ?',
    contexte:e=>`Avec le titre en poche, tout le monde veut battre les ${e.franchise.nom}. Le plus dur, c'est de rester au sommet.`,
@@ -487,7 +497,7 @@ const SCENARIO_MATCHS={
   fragile:['blessure','retour'], fragile2:['blessure','retour','remontee'], tension:['technique','rival'], tension2:['technique','rival'],
   cote_basse:['trade_rumeur','rival'], cote_basse2:['trade_rumeur','exterieur'], contrat:['trade_rumeur','lancers'],
   veteran:['remontee','blessure','lancers'], veteran2:['remontee','playoffs','lancers'], mi_carriere:['playoffs','remontee','trade_rumeur'],
-  mi_carriere2:['blessure','remontee'], montee:['rival','exterieur','buzzer'], ete_calme:[], ete_calme2:[]
+  mi_carriere2:['blessure','remontee'], selection:['exterieur','playoffs'], montee:['rival','exterieur','buzzer'], ete_calme:[], ete_calme2:[]
 };
 const RIVALITES_EQUIPES=[
   {a:'lac',b:'bos',detail:'le classique des finales'},
