@@ -199,6 +199,8 @@ function ecranGeste(opt){
   const base=pourcentageOption(opt);
   document.getElementById('app').innerHTML=__t("<div class=\"screen\">\n    {#0}\n    {#1}\n    <p class=\"logo\">À TOI DE JOUER</p>\n    <div class=\"action-choisie\" style=\"--barre:{#2}\"><p>{#3}</p><span class=\"pct\"><b class=\"chiffre\" id=\"pct-live\">{#4}</b>%</span></div>\n    <div class=\"jauge\"><div id=\"jauge-zone\"></div><div id=\"jauge-curseur\"></div></div>\n    <p class=\"aide-geste\" id=\"aide-geste\">Appuie quand la barre est dans la zone verte.</p>\n    <button id=\"btn-geste\" class=\"bouton bouton-geste\">{#5}</button>\n  </div>",[enteteMatch(),tableauHtml(m.tableau),COUL_STATS[opt.stat]||'var(--border)',escapeHtml(opt.texte),base,g[0]]);
   window.scrollTo(0,0);
+  const dif=difficulteJauge(m);
+  if(dif.note){ const el=document.getElementById('aide-geste'); if(el) el.insertAdjacentHTML('beforebegin','<p class="aide-geste aide-dur">'+escapeHtml(dif.note)+'</p>'); }
   demarrerJauge(opt.stat,geste=>{
     Son.tic();
     const pct=Math.round(clamp(base/100+geste.bonus,0.05,0.95)*100);
@@ -208,7 +210,7 @@ function ecranGeste(opt){
     const avantTab=m.tableau, stat=opt.stat;
     const entree=resoudreMatch(opt,geste);
     setTimeout(()=>ecranReveal(entree,avantTab,stat),650);
-  });
+  },dif);
 }
 function ecranReveal(entree,tab,stat){
   const g=GESTES[stat]||GESTES.scoring, ok=entree.reussi, apres=tab?scoreApres(tab,ok):null;

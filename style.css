@@ -205,3 +205,4 @@
 .tab-eq i.drap u{ flex:1; display:block; text-decoration:none; }
 .tab-eq i.drap{ width:22px; height:34px; display:flex; flex-direction:column; overflow:hidden; border-radius:4px; }
 .tab-eq i.drap u{ flex:1; display:block; text-decoration:none; }
+.aide-dur{ color:#F5C542 !important; font-weight:600; }

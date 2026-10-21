@@ -132,13 +132,31 @@ function monterBoutonSon(){
 /* ---------- Jauge de geste ---------- */
 const GESTES={scoring:[__('TIRER'),__("SWISH !"),__("LE TIR SORT")],defense:[__('CONTRER'),__("STOP !"),__("ILS PASSENT")],playmaking:[__('PASSER'),__("QUELLE PASSE !"),__("PASSE PERDUE")],athletisme:[__('ATTAQUER'),__("EXPLOSIF !"),__("CONTRÉ !")],basketIQ:[__('DÉCIDER'),__("BIEN LU !"),__("MAUVAIS CHOIX")]};
 let jaugeRaf=0;
-function demarrerJauge(statCle,surArret){
+/* Difficulté de la jauge selon l'importance du moment :
+   - moment décisif de saison régulière (fin de 4e quart-temps, tir final, lancers décisifs, prolongation, finale de coupe) : zone −15 %, curseur +5 %
+   - playoffs : zone −15 / −30 / −45 / −60 % et curseur +15 / +30 / +40 / +50 % selon le tour (1er tour -> finales) */
+const JAUGE_PO={zone:[0.85,0.70,0.55,0.40],vitesse:[1.15,1.30,1.40,1.50]};
+function momentDecisif(m){
+  if(!m) return false;
+  if(['buzzer','lancers','prolongation','coupe_finale'].includes(m.id)) return true;
+  const t=m.tableau; if(!t) return false;
+  if(t.q>=5) return true;
+  const mm=/^(\d{1,2}):(\d{2})$/.exec(String(t.t));
+  return t.q>=4&&!!mm&&(Number(mm[1])*60+Number(mm[2]))<=120;
+}
+function difficulteJauge(m){
+  if(m&&m.playoff){ const i=Math.max(0,Math.min(3,Number(m.tour)||0)); return {zone:JAUGE_PO.zone[i],vitesse:JAUGE_PO.vitesse[i],note:__t("Jauge durcie : zone verte −{#0} %, curseur +{#1} %.",[Math.round((1-JAUGE_PO.zone[i])*100),Math.round((JAUGE_PO.vitesse[i]-1)*100)])}; }
+  if(momentDecisif(m)) return {zone:0.85,vitesse:1.05,note:__t("Moment décisif : zone verte −{#0} %, curseur +{#1} %.",[15,5])};
+  return {zone:1,vitesse:1,note:''};
+}
+function demarrerJauge(statCle,surArret,diff){
+  diff=diff||{zone:1,vitesse:1};
   const zone=document.getElementById('jauge-zone'), curseur=document.getElementById('jauge-curseur'), bouton=document.getElementById('btn-geste');
   if(!zone||!curseur||!bouton) return;
-  const largeur=0.17+(etat.stats[statCle]||50)/100*0.10;
+  const largeur=(0.17+(etat.stats[statCle]||50)/100*0.10)*diff.zone;
   const centre=0.2+Math.random()*0.6;
   zone.style.left=((centre-largeur/2)*100)+'%'; zone.style.width=(largeur*100)+'%';
-  const debut=performance.now(), periode=1500;
+  const debut=performance.now(), periode=1500/diff.vitesse;
   let fini=false, pos=0;
   const tick=now=>{
     if(fini) return;

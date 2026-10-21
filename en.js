@@ -916,5 +916,7 @@ Object.assign(window.EN,{
 "Risque": "Risk",
 "les ": "The ",
 "Ta sélection": "Your national team",
-"NEUTRE": "NEUTRAL"
+"NEUTRE": "NEUTRAL",
+"Jauge durcie : zone verte −{#0} %, curseur +{#1} %.": "Tougher gauge: green zone −{#0}%, cursor +{#1}%.",
+"Moment décisif : zone verte −{#0} %, curseur +{#1} %.": "Decisive moment: green zone −{#0}%, cursor +{#1}%."
 });
