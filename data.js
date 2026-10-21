@@ -2,37 +2,49 @@
 if(window.top!==window.self){ try{ document.documentElement.style.display='none'; window.top.location=window.self.location; }catch(err){} }
 // Contenu du jeu : franchises, postes, choix, scénarios, situations de match, rivalités
 const FRANCHISES=[
-  {id:'bos',ville:'Boston',nom:'Harborlights',couleur:'#1B7A4A'},
-  {id:'bkn',ville:'Brooklyn',nom:'Voltage',couleur:'#6B7280'},
-  {id:'nyk',ville:'New York',nom:'Empire',couleur:'#1D5FD1'},
-  {id:'phi',ville:'Philadelphie',nom:'Liberty',couleur:'#1B4F9C'},
-  {id:'tor',ville:'Toronto',nom:'Skyline',couleur:'#C8262C'},
-  {id:'chi',ville:'Chicago',nom:'Windstorm',couleur:'#CE1141'},
-  {id:'cle',ville:'Cleveland',nom:'Steel',couleur:'#7B2E3E'},
-  {id:'det',ville:'Detroit',nom:'Motors',couleur:'#1857A4'},
-  {id:'ind',ville:'Indiana',nom:'Crossroads',couleur:'#3A4E7C'},
-  {id:'mil',ville:'Milwaukee',nom:'Antlers',couleur:'#1E5631'},
-  {id:'atl',ville:'Atlanta',nom:'Phoenix',couleur:'#D62828'},
-  {id:'cha',ville:'Charlotte',nom:'Current',couleur:'#148F8F'},
-  {id:'mia',ville:'Miami',nom:'Blaze',couleur:'#E0311D'},
-  {id:'orl',ville:'Orlando',nom:'Wonders',couleur:'#1657B0'},
-  {id:'was',ville:'Washington',nom:'Monuments',couleur:'#C8102E'},
-  {id:'den',ville:'Denver',nom:'Peaks',couleur:'#3A4E7C'},
-  {id:'min',ville:'Minnesota',nom:'Northlights',couleur:'#1C4E80'},
-  {id:'okc',ville:'Oklahoma City',nom:'Twisters',couleur:'#1D6FBF'},
-  {id:'por',ville:'Portland',nom:'Pioneers',couleur:'#C8262C'},
-  {id:'uta',ville:'Utah',nom:'Canyons',couleur:'#3A4E7C'},
-  {id:'gsw',ville:'Golden State',nom:'Comets',couleur:'#1D5FA8'},
-  {id:'lac',ville:'Los Angeles',nom:'Coastliners',couleur:'#1B5FAE'},
-  {id:'lal',ville:'Los Angeles',nom:'Starlight',couleur:'#5B2A8C'},
-  {id:'phx',ville:'Phoenix',nom:'Solstice',couleur:'#E8720C'},
-  {id:'sac',ville:'Sacramento',nom:'Capitol',couleur:'#5A2D82'},
-  {id:'dal',ville:'Dallas',nom:'Rustlers',couleur:'#1650A0'},
-  {id:'hou',ville:'Houston',nom:'Orbit',couleur:'#CE1126'},
-  {id:'mem',ville:'Memphis',nom:'Rhythm',couleur:'#3A4E7C'},
-  {id:'nop',ville:'Nouvelle-Orléans',nom:'Krewe',couleur:'#0E2240'},
-  {id:'sas',ville:'San Antonio',nom:'Vaqueros',couleur:'#8A8F98'}
+  {id:'bos',ville:'Boston',nom:'Harborlights',couleur:'#007A33',couleur2:'#BA9653'},
+  {id:'bkn',ville:'Brooklyn',nom:'Voltage',couleur:'#6B7280',couleur2:'#0B0B0B'},
+  {id:'nyk',ville:'New York',nom:'Empire',couleur:'#006BB6',couleur2:'#F58426'},
+  {id:'phi',ville:'Philadelphie',nom:'Liberty',couleur:'#0B4EA2',couleur2:'#ED174C'},
+  {id:'tor',ville:'Toronto',nom:'Skyline',couleur:'#BA0C2F',couleur2:'#A1A1A4'},
+  {id:'chi',ville:'Chicago',nom:'Windstorm',couleur:'#CE1141',couleur2:'#0B0B0B'},
+  {id:'cle',ville:'Cleveland',nom:'Steel',couleur:'#860038',couleur2:'#FDBB30'},
+  {id:'det',ville:'Detroit',nom:'Motors',couleur:'#1D42BA',couleur2:'#C8102E'},
+  {id:'ind',ville:'Indiana',nom:'Crossroads',couleur:'#002D62',couleur2:'#FDBB30'},
+  {id:'mil',ville:'Milwaukee',nom:'Antlers',couleur:'#00471B',couleur2:'#EEE1C6'},
+  {id:'atl',ville:'Atlanta',nom:'Peachtree',couleur:'#C8102E',couleur2:'#F4A07A'},
+  {id:'cha',ville:'Charlotte',nom:'Current',couleur:'#00788C',couleur2:'#1D1160'},
+  {id:'mia',ville:'Miami',nom:'Blaze',couleur:'#98002E',couleur2:'#0B0B0B'},
+  {id:'orl',ville:'Orlando',nom:'Wonders',couleur:'#0077C0',couleur2:'#C4CED4'},
+  {id:'was',ville:'Washington',nom:'Monuments',couleur:'#002B5C',couleur2:'#E31837'},
+  {id:'den',ville:'Denver',nom:'Peaks',couleur:'#0E2240',couleur2:'#FEC524'},
+  {id:'min',ville:'Minnesota',nom:'Northlights',couleur:'#0C2340',couleur2:'#78BE20'},
+  {id:'okc',ville:'Oklahoma City',nom:'Twisters',couleur:'#007AC1',couleur2:'#EF3B24'},
+  {id:'por',ville:'Portland',nom:'Pioneers',couleur:'#E03A3E',couleur2:'#0B0B0B'},
+  {id:'uta',ville:'Utah',nom:'Canyons',couleur:'#3E2680',couleur2:'#B87333'},
+  {id:'gsw',ville:'San Francisco',nom:'Comets',couleur:'#1D428A',couleur2:'#FFC72C'},
+  {id:'lac',ville:'Los Angeles',nom:'Coastliners',couleur:'#1B5FAE',couleur2:'#C8102E'},
+  {id:'lal',ville:'Los Angeles',nom:'Starlight',couleur:'#552583',couleur2:'#FDB927'},
+  {id:'phx',ville:'Phoenix',nom:'Solstice',couleur:'#E56020',couleur2:'#1D1160'},
+  {id:'sac',ville:'Sacramento',nom:'Capitol',couleur:'#5A2D81',couleur2:'#63727A'},
+  {id:'dal',ville:'Dallas',nom:'Rustlers',couleur:'#00538C',couleur2:'#B8C4CA'},
+  {id:'hou',ville:'Houston',nom:'Orbit',couleur:'#CE1126',couleur2:'#C4CED4'},
+  {id:'mem',ville:'Memphis',nom:'Rhythm',couleur:'#5D76A9',couleur2:'#F5B112'},
+  {id:'nop',ville:'Nouvelle-Orléans',nom:'Krewe',couleur:'#0A1E3C',couleur2:'#B4975A'},
+  {id:'sas',ville:'San Antonio',nom:'Vaqueros',couleur:'#C4CED4',couleur2:'#0B0B0B'}
 ];
+// Couleurs de maillot pour un match : domicile = couleur principale ; à l'extérieur = couleur 2,
+// puis couleur principale, puis blanc si l'adversaire est trop proche.
+function _rgb(h){ return [1,3,5].map(i=>parseInt(h.slice(i,i+2),16)); }
+function distanceCouleur(a,b){ const x=_rgb(a),y=_rgb(b); const rm=(x[0]+y[0])/2; const dr=x[0]-y[0],dg=x[1]-y[1],db=x[2]-y[2]; return Math.sqrt((2+rm/256)*dr*dr+4*dg*dg+(2+(255-rm)/256)*db*db); }
+const SEUIL_COULEUR=140;
+function couleursMatch(dom,ext){
+  const cd=dom.couleur;
+  let ce=ext.couleur2;
+  if(distanceCouleur(ce,cd)<SEUIL_COULEUR) ce=ext.couleur;
+  if(distanceCouleur(ce,cd)<SEUIL_COULEUR) ce='#F4F4F4';
+  return {dom:cd,ext:ce};
+}
 const POSITIONS={
   'Meneur':{scoring:50,playmaking:70,defense:48,athletisme:55,basketIQ:65},
   'Arrière':{scoring:68,playmaking:52,defense:50,athletisme:62,basketIQ:52},

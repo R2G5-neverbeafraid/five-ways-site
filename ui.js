@@ -102,6 +102,7 @@ function renderAccueil(){
     <p style="margin:0;font-size:12.5px;font-weight:600;letter-spacing:.14em;color:var(--text-muted)">5 CHOIX. 1 CARRIÈRE.</p>
     <button id="btn-jouer" class="bouton" style="width:100%;margin-top:14px">Jouer</button>
     ${(()=>{const h=lireHof();return h.length?`<div style="width:100%;text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px"><p class="byline" style="margin-bottom:8px">HALL OF FAME · CET APPAREIL</p>${h.map((c,i)=>`<div style="display:flex;justify-content:space-between;font-size:13.5px;padding:3px 0"><span>${i+1}. #${c.numero!==undefined?c.numero:'—'} ${escapeHtml(c.nom)}</span><span style="color:${rareteScore(c.score)[1]};font-weight:700">${c.score}/96</span></div>`).join('')}</div>`:'';})()}
+    ${defisHtml()}
     ${signature25()}
   </div>`;
 }
@@ -196,58 +197,138 @@ function statsMiniHtml(){
   return `<div class="stats-mini">${L.map(([n,k])=>`<span class="stat-m">${n} <b class="n">${etat.stats[k]}</b><i><b style="width:${etat.stats[k]}%"></b></i></span>`).join('')}</div>`;
 }
 const LIBELLES_STATS={scoring:'Scoring',playmaking:'Playmaking',defense:'Défense',athletisme:'Athlétisme',basketIQ:'Basket IQ'};
-function renderMatch(){
+const COUL_STATS={scoring:'#F28C28',playmaking:'#22B8CF',defense:'#4ADE9A',athletisme:'#F06292',basketIQ:'#9B6BFF'};
+function enteteMatch(){
   const f=etat.franchise;
-  const m=etat.matchActuel;
-  return `<div class="screen">
-    <div class="entete-tour">
+  return `<div class="entete-tour">
       <span class="puce" style="background:${f.couleur}"></span>
       <span class="meta">Saison ${etat.saison}</span>
       <span class="meta">${etat.age} ans</span>
       <span class="meta">${escapeHtml(f.ville)} ${escapeHtml(f.nom)}</span>
-    </div>
-    <p class="logo">EN PLEIN MATCH — SITUATION ${etat.matchsResultats.length+1}/${etat.matchsTotal}</p>
+    </div>`;
+}
+function libelleTemps(t){ return (t.q>=5?'PROL.':'Q'+t.q)+' · '+escapeHtml(t.t); }
+function tableauHtml(t,score,classe){
+  if(!t) return '';
+  const s=score||{a:t.a,b:t.b};
+  return `<div class="tableau ${classe||''}">
+    <div class="tab-eq"><i style="background:${t.ca}"></i><span class="tab-nom">${escapeHtml(t.na)}</span><b id="tab-a" class="tab-score">${s.a}</b></div>
+    <div class="tab-centre"><span class="tab-temps">${libelleTemps(t)}</span><span class="tab-dom">${t.dom?'À DOMICILE':'À L\'EXTÉRIEUR'}</span></div>
+    <div class="tab-eq droite"><b id="tab-b" class="tab-score">${s.b}</b><span class="tab-nom">${escapeHtml(t.nb)}</span><i style="background:${t.cb}"></i></div>
+  </div>`;
+}
+function pourcentageOption(c){ return Math.round(clamp(etat.stats[c.stat]/100+c.mod,0.12,0.9)*100); }
+function renderMatch(){
+  const m=etat.matchActuel;
+  const rv=m.rivalId?rivaux().find(r=>r.id===m.rivalId):null;
+  return `<div class="screen">
+    ${enteteMatch()}
+    <p class="logo">MOMENT DE MATCH ${etat.matchsResultats.length+1}/${etat.matchsTotal}</p>
+    ${tableauHtml(m.tableau)}
     <h1 class="titre-ecran">${escapeHtml(m.titre)}</h1>
-    ${(()=>{const rv=m.rivalId?rivaux().find(r=>r.id===m.rivalId):null;return rv?`<div class="rival-card"><p class="rival-titre">RIVALITÉ ${pastilles(rv.niveau)}</p><p class="rival-ligne">Bilan face à ${escapeHtml(rv.court)} : ${rv.bilan.v}V – ${rv.bilan.d}D · enjeux amplifiés</p></div>`:'';})()}
+    ${rv?`<div class="rival-card"><p class="rival-titre">RIVALITÉ ${pastilles(rv.niveau)}</p><p class="rival-ligne">Bilan face à ${escapeHtml(rv.court)} : ${rv.bilan.v}V – ${rv.bilan.d}D · enjeux amplifiés</p></div>`:''}
     <p class="flavor">${escapeHtml(m.contexte)}</p>
-    <div class="pile-choix">${m.choix.map((c,i)=>`<button class="carte-choix" data-i="${i}"><p>${escapeHtml(c.texte)}</p></button>`).join('')}</div>
+    <div class="pile-choix">${m.choix.map((c,i)=>`<button class="carte-choix carte-match" data-i="${i}" style="--barre:${COUL_STATS[c.stat]||'var(--border)'}"><p>${escapeHtml(c.texte)}</p><span class="pct"><b class="chiffre">${pourcentageOption(c)}</b>%<small>${escapeHtml(LBL[c.stat]||'')}</small></span></button>`).join('')}</div>
+    <p class="aide-geste">Ensuite, arrête la jauge dans la zone verte : jusqu'à +10 % de réussite.</p>
     ${statsMiniHtml()}
   </div>`;
 }
 function attacherMatch(){
-  document.querySelectorAll('.carte-choix').forEach(btn=>{
-    btn.onclick=()=>{ resoudreMatch(etat.matchActuel.choix[Number(btn.dataset.i)]); render(); };
+  document.querySelectorAll('.carte-match').forEach(btn=>{
+    btn.onclick=()=>{ Son.clic(); ecranGeste(etat.matchActuel.choix[Number(btn.dataset.i)]); };
   });
+}
+function ecranGeste(opt){
+  const m=etat.matchActuel, g=GESTES[opt.stat]||GESTES.scoring;
+  const base=pourcentageOption(opt);
+  document.getElementById('app').innerHTML=`<div class="screen">
+    ${enteteMatch()}
+    ${tableauHtml(m.tableau)}
+    <p class="logo">À TOI DE JOUER</p>
+    <div class="action-choisie" style="--barre:${COUL_STATS[opt.stat]||'var(--border)'}"><p>${escapeHtml(opt.texte)}</p><span class="pct"><b class="chiffre" id="pct-live">${base}</b>%</span></div>
+    <div class="jauge"><div id="jauge-zone"></div><div id="jauge-curseur"></div></div>
+    <p class="aide-geste" id="aide-geste">Appuie quand la barre est dans la zone verte.</p>
+    <button id="btn-geste" class="bouton bouton-geste">${g[0]}</button>
+  </div>`;
+  window.scrollTo(0,0);
+  demarrerJauge(opt.stat,geste=>{
+    Son.tic();
+    const pct=Math.round(clamp(base/100+geste.bonus,0.05,0.95)*100);
+    const aide=document.getElementById('aide-geste'), live=document.getElementById('pct-live');
+    if(live) live.textContent=pct;
+    if(aide) aide.textContent=geste.label==='parfait'?'Geste parfait ! +10 %':geste.label==='bon'?'Bon geste, +4 %':'Geste raté, −5 %';
+    const avantTab=m.tableau, stat=opt.stat;
+    const entree=resoudreMatch(opt,geste);
+    setTimeout(()=>ecranReveal(entree,avantTab,stat),650);
+  });
+}
+function ecranReveal(entree,tab,stat){
+  const g=GESTES[stat]||GESTES.scoring, ok=entree.reussi, apres=tab?scoreApres(tab,ok):null;
+  const termine=!!(tab&&tab.q>=4&&/^0:[0-5]\d$/.test(tab.t));
+  document.getElementById('app').innerHTML=`<div class="screen reveal">
+    ${enteteMatch()}
+    ${tableauHtml(tab)}
+    <div class="suspense" id="suspense"><span class="points">…</span></div>
+    <div id="apres" class="apres"></div>
+  </div>`;
+  window.scrollTo(0,0);
+  Son.foule();
+  setTimeout(()=>{
+    const zone=document.getElementById('suspense'); if(!zone) return;
+    zone.innerHTML=`<span class="mot ${ok?'ok':'ko'}">${escapeHtml(ok?g[1]:g[2])}</span>`;
+    if(apres){ const a=document.getElementById('tab-a'), b=document.getElementById('tab-b'); if(a){ a.textContent=apres.a; a.classList.add('bump'); } if(b){ b.textContent=apres.b; b.classList.add('bump'); } }
+    if(ok){ Son.swish(); vibrer(60); if(termine) setTimeout(()=>{ Son.buzzer(); vibrer([80,40,80]); },450); } else { Son.contre(); Son.huee(); vibrer([30,40,120]); }
+  },1100);
+  setTimeout(()=>{
+    const zone=document.getElementById('apres'); if(!zone) return;
+    const fin=termine&&apres?`<p class="fin-match ${apres.a>apres.b?'ok':'ko'}">${apres.a>apres.b?'VICTOIRE':'DÉFAITE'} ${apres.a}–${apres.b}</p>`:'';
+    zone.innerHTML=`${fin}<p class="narration">${escapeHtml(entree.narration)}</p>
+      <div class="fil">${(entree.actus||[]).map(a=>`<div class="actu"><span class="src">${escapeHtml(a.src)}</span><span>${escapeHtml(a.texte)}</span></div>`).join('')}</div>
+      <button id="btn-continuer" class="bouton">Continuer</button>`;
+    zone.classList.add('visible');
+    document.getElementById('btn-continuer').onclick=()=>{ Son.clic(); render(); };
+  },2100);
+}
+function bilanSaisonHtml(s){
+  if(!s||typeof s!=='object') return '';
+  const v=Number(s.v)||0, d=Number(s.d)||0, rang=Number(s.rang)||15, st=Math.max(0,Math.min(5,Number(s.stade)||0));
+  const points=[1,2,3,4,5].map(i=>`<i class="${st>=i?'on':''}"></i>`).join('');
+  return `<div class="bilan-saison anim" style="animation-delay:.1s">
+    <p class="byline">BILAN DE LA SAISON</p>
+    <div class="vd"><span class="chiffre"><b class="cnt" data-v="${v}">0</b> – <b class="cnt" data-v="${d}">0</b></span><span class="rang">${texteRang(rang)} de la conférence</span></div>
+    <div class="playoffs"><div class="pts">${points}</div><span>${escapeHtml(STADES[st])}</span></div>
+  </div>`;
 }
 function renderResultat(){
   const r=etat.dernierResultat;
-  const f=etat.franchise;
-  const deltasHtml=Object.keys(LIBELLES_STATS).map(k=>{const v=r.deltas[k];return v?`<span class="delta ${v>0?'pos':'neg'}">${LIBELLES_STATS[k]} ${v>0?'▲ +':'▼ '}${v}</span>`:`<span class="delta">${LIBELLES_STATS[k]} =</span>`;}).join('');
+  const deltasHtml=Object.keys(LIBELLES_STATS).map(k=>{const v=Number(r.deltas[k])||0;return v?`<span class="delta ${v>0?'pos':'neg'}">${LIBELLES_STATS[k]} ${v>0?'▲ +':'▼ −'}<b class="cnt" data-v="${Math.abs(v)}">0</b></span>`:`<span class="delta">${LIBELLES_STATS[k]} =</span>`;}).join('');
   const evtsHtml=r.evenements.map(e=>`<span class="badge">${escapeHtml(e)}</span>`).join('');
   const liste=r.matchs||(r.match?[r.match]:[]);
-  const matchHtml=liste.map(m=>`<div class="match-issue ${m.reussi?'ok':'ko'}">
-      <p class="match-titre">${escapeHtml(m.titre)} — ${m.reussi?'Réussi':'Raté'}</p>
+  const matchHtml=liste.map((m,i)=>`<div class="match-issue anim ${m.reussi?'ok':'ko'}" style="animation-delay:${0.35+i*0.25}s">
+      <p class="match-titre">${escapeHtml(m.titre)} — ${m.reussi?'Réussi':'Raté'}${m.p?' · '+Number(m.p)+' %':''}${m.geste==='parfait'?' · geste parfait':''}</p>
       <p class="match-choix">${escapeHtml(m.texte)}</p>
       <p class="match-narration">${escapeHtml(m.narration)}</p>
       ${m.rival?`<div class="rival-card"><p class="rival-titre">DUEL — ${escapeHtml(m.rival.nom)} ${pastilles(m.rival.niveau)}</p><p class="rival-ligne">Bilan : ${m.rival.v}V – ${m.rival.d}D</p></div>`:''}
     </div>`).join('');
+  const actus=[];
+  const dernier=liste[liste.length-1];
+  if(dernier&&Array.isArray(dernier.actus)) actus.push(...dernier.actus.slice(0,1));
+  const autre=[].concat(...liste.map(m=>Array.isArray(m.actus)?m.actus:[])).filter(a=>a&&(a.src==='RIVAL'||a.src==='FANS')).pop();
+  if(autre) actus.push(autre);
+  const fil=actus.length?`<div class="fil anim" style="animation-delay:${0.4+liste.length*0.25}s"><p class="byline">À LA UNE</p>${actus.map(a=>`<div class="actu"><span class="src">${escapeHtml(a.src)}</span><span>${escapeHtml(a.texte)}</span></div>`).join('')}</div>`:'';
   return `<div class="screen">
-    <div class="entete-tour">
-      <span class="puce" style="background:${f.couleur}"></span>
-      <span class="meta">Saison ${etat.saison}</span>
-      <span class="meta">${etat.age} ans</span>
-      <span class="meta">${escapeHtml(f.ville)} ${escapeHtml(f.nom)}</span>
-    </div>
-    <p class="flavor">Intersaison :</p>
-    <div style="border:1px solid ${COULEURS_AXES[r.axe]||'var(--border)'};background:color-mix(in srgb,${COULEURS_AXES[r.axe]||'#26345A'} 12%,var(--surface));border-radius:12px;padding:14px 15px"><h1 class="titre-ecran" style="font-size:20px">${escapeHtml(r.texteChoix)}</h1></div>
+    ${enteteMatch()}
+    ${bilanSaisonHtml(r.saison)}
+    <div class="anim" style="animation-delay:.2s;border:1px solid ${COULEURS_AXES[r.axe]||'var(--border)'};background:color-mix(in srgb,${COULEURS_AXES[r.axe]||'#26345A'} 12%,var(--surface));border-radius:12px;padding:14px 15px"><h1 class="titre-ecran" style="font-size:20px">${escapeHtml(r.texteChoix)}</h1></div>
     ${matchHtml}
-    ${deltasHtml?`<div class="deltas">${deltasHtml}</div>`:'<p class="recap">Aucun changement de stats cette saison.</p>'}
-    ${evtsHtml?`<div class="badges">${evtsHtml}</div>`:''}
+    ${fil}
+    ${deltasHtml?`<div class="deltas anim" style="animation-delay:${0.6+liste.length*0.25}s">${deltasHtml}</div>`:'<p class="recap">Aucun changement de stats cette saison.</p>'}
+    ${evtsHtml?`<div class="badges anim" style="animation-delay:${0.8+liste.length*0.25}s">${evtsHtml}</div>`:''}
     <button id="btn-suite" class="bouton">Saison suivante</button>
   </div>`;
 }
 function attacherResultat(){
-  document.getElementById('btn-suite').onclick=()=>{ continuerApresResultat(); render(); };
+  document.getElementById('btn-suite').onclick=()=>{ Son.clic(); continuerApresResultat(); render(); };
 }
 function renderRetraite(){
   const sc=calculerScore();
@@ -289,7 +370,7 @@ function attacherRetraite(){
 }
 
 function render(){
-  try{ renderEcran(); }
+  try{ renderEcran(); monterBoutonSon(); animerCompteurs(); }
   catch(e){
     try{ localStorage.removeItem(SAVE_KEY); }catch(_){}
     etat=null;

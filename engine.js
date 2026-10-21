@@ -172,7 +172,8 @@ function genererMatchCoupe(rang){
   const sub=t=>t.replace(/\{pays\}/g,pays).replace(/\{coupe\}/g,sa.nom);
   return {id:s.id,titre:s.titre,contexte:sub(s.contexte),choix:melangerOrdre(s.choix.map(c=>({...c,texte:sub(c.texte),ok:sub(c.ok),ko:sub(c.ko)}))),coupe:true};
 }
-function genererMatch(){
+function genererMatch(){ const m=genererMatchBase(); m.tableau=genererTableau(m); return m; }
+function genererMatchBase(){
   if(rivaux().length&&etat.matchsResultats&&etat.matchsResultats.length===etat.matchsTotal-1) return genererDuel();
   if(etat.scenarioActuel&&etat.scenarioActuel.coupe&&etat.matchsResultats&&etat.matchsResultats.length<3) return genererMatchCoupe(etat.matchsResultats.length);
   const recents=etat.situationsRecentes||[];
@@ -187,27 +188,35 @@ function genererMatch(){
   etat.situationsRecentes=[...recents,s.id].slice(-5);
   return {id:s.id,titre:s.titre,contexte:s.contexte,choix:melangerOrdre(s.choix)};
 }
-function resoudreMatch(opt){
-  const p=clamp(etat.stats[opt.stat]/100+opt.mod,0.12,0.9);
+function resoudreMatch(opt,geste){
+  const bonusGeste=geste&&Number.isFinite(geste.bonus)?clamp(geste.bonus,-0.1,0.12):0;
+  const p=clamp(clamp(etat.stats[opt.stat]/100+opt.mod,0.12,0.9)+bonusGeste,0.05,0.95);
   const reussi=Math.random()<p;
   const rv=etat.matchActuel.rivalId?rivaux().find(r=>r.id===etat.matchActuel.rivalId):null;
   const f=rv?1+0.2*rv.niveau:1;
   appliquerEffets(scaleEffets(reussi?opt.gain:opt.perte,f));
   const enjeu=rv?opt.enjeu*(1+0.1*rv.niveau):opt.enjeu;
   etat.bonusSaison+=reussi?enjeu:-enjeu/2;
-  const entree={titre:etat.matchActuel.titre, texte:opt.texte, reussi, narration:reussi?opt.ok:opt.ko};
+  const entree={titre:etat.matchActuel.titre, texte:opt.texte, reussi, narration:reussi?opt.ok:opt.ko, stat:opt.stat, p:Math.round(p*100), geste:(geste&&geste.label)||null, tableau:etat.matchActuel.tableau||null};
   if(rv){
     if(reussi) rv.bilan.v++; else rv.bilan.d++;
     if((rv.bilan.v+rv.bilan.d)%2===0&&rv.niveau<5) rv.niveau++;
     etat.dernierRivalId=rv.id;
     entree.rival={nom:rv.nom,type:rv.type,niveau:rv.niveau,v:rv.bilan.v,d:rv.bilan.d};
   }
+  entree.actus=genererActus(entree,rv);
   etat.matchsResultats.push(entree);
+  if(typeof suivre==='function'){
+    if(reussi) suivre('match_ok');
+    if(geste&&geste.label==='parfait') suivre('parfait');
+    if(reussi&&rv) suivre('duel_ok');
+    if(reussi&&(etat.matchActuel.id==='coupe_finale'||(entree.tableau&&entree.tableau.q>=4&&/^0:[0-5]\d$/.test(entree.tableau.t)))) suivre('clutch');
+  }
 
   if(etat.matchsResultats.length<etat.matchsTotal){
     etat.matchActuel=genererMatch();
     sauvegarder();
-    return;
+    return entree;
   }
 
   const bonus=etat.bonusSaison*0.6;
@@ -231,12 +240,13 @@ function resoudreMatch(opt){
     else if(demi||(poule&&Math.random()<0.4)){ medaille='bronze'; etat.distinctions.medailles=(etat.distinctions.medailles||0)+1; evenements.push(`Médaille de bronze — ${nomC}${avec}`); }
   }
   const reussis=etat.matchsResultats.filter(m=>m.reussi).length;
+  const saisonSportive=genererSaisonSportive(evenements.some(x=>x.startsWith('Titre')),reussis,etat.matchsResultats.length,moyenne);
   etat.bilan={
     titre:evenements.some(e=>e.startsWith('Titre')),
     allStar:evenements.some(e=>e.startsWith('Sélection')),
     mvp:evenements.some(e=>e.startsWith('Élu MVP')),
     blessure:evenements.some(e=>e.startsWith('Blessure')),
-    medaille,
+    medaille, saison:saisonSportive,
     reussis, rates:etat.matchsResultats.length-reussis, total:etat.matchsResultats.length
   };
   const avant=etat.statsAvantSaison||etat.stats;
@@ -244,11 +254,19 @@ function resoudreMatch(opt){
   for(const k in avant){ if(etat.stats[k]!==avant[k]) deltas[k]=etat.stats[k]-avant[k]; }
   etat.dernierResultat={
     texteChoix:etat.texteChoixSaison, axe:etat.axeChoisiSaison, deltas, evenements,
-    matchs:etat.matchsResultats
+    matchs:etat.matchsResultats, saison:saisonSportive
   };
+  if(typeof suivre==='function'){
+    suivre('saison'); suivre('saison_n',etat.saison);
+    if(etat.bilan.titre) suivre('titre');
+    if(etat.bilan.allStar) suivre('allstar');
+    if(etat.bilan.mvp) suivre('mvp');
+    if(medaille) suivre('medaille',1,medaille);
+  }
   etat.matchActuel=null;
   etat.phase='resultat';
   sauvegarder();
+  return entree;
 }
 const HOF_KEY='five-ways-hof-v1';
 function rareteScore(t){
@@ -260,6 +278,7 @@ function enregistrerCarriere(){
   etat.hofEnregistre=true;
   try{
     const sc=calculerScore();
+    if(typeof suivre==='function') suivre('score',sc.total);
     const liste=lireHof();
     liste.push({nom:etat.nom,numero:etat.numero,poste:etat.poste,score:sc.total,saisons:etat.saison-1,titres:etat.distinctions.titres,equipe:etat.franchise.ville+' '+etat.franchise.nom});
     liste.sort((a,b)=>b.score-a.score);
@@ -318,6 +337,11 @@ function assainir(s){
   s.malusAccumule=num(s.malusAccumule,0,999,0);
   if(Array.isArray(s.rivaux)) s.rivaux=s.rivaux.slice(0,12).filter(r=>r&&typeof r==='object').map(r=>({id:String(r.id||'').slice(0,20),type:String(r.type||'').slice(0,10),nom:String(r.nom||'').slice(0,40),court:String(r.court||'').slice(0,30),prenom:String(r.prenom||'').slice(0,20),poste:String(r.poste||'').slice(0,20),equipe:String(r.equipe||'').slice(0,40),detail:String(r.detail||'').slice(0,60),niveau:num(r.niveau,1,5,1),bilan:{v:num(r.bilan&&r.bilan.v,0,999,0),d:num(r.bilan&&r.bilan.d,0,999,0)}}));
   else s.rivaux=[];
+  const t=s.matchActuel&&s.matchActuel.tableau;
+  if(t&&typeof t==='object'){
+    const hex=v=>/^#[0-9A-Fa-f]{6}$/.test(v)?v:'#4C6FFF', ab=v=>String(v||'').replace(/[^A-Z]/g,'').slice(0,4)||'EQP';
+    s.matchActuel.tableau={na:ab(t.na),nb:ab(t.nb),ca:hex(t.ca),cb:hex(t.cb),q:num(t.q,1,5,4),t:/^\d{1,2}:\d{2}$/.test(String(t.t))?String(t.t):'0:30',a:num(t.a,0,250,80),b:num(t.b,0,250,80),dom:!!t.dom};
+  } else if(s.matchActuel) delete s.matchActuel.tableau;
   return true;
 }
 function charger(){
