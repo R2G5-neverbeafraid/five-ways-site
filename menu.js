@@ -70,20 +70,12 @@ function fermerMenu(){ const m=document.getElementById('menu-fond'); if(m) m.rem
 function enCours(){ return !!etat&&etat.phase!=='retraite'; }
 function ouvrirMenu(){
   fermerMenu();
-  const faits=carrieresFaites().faits;
-  const cartes=carrieresDuJour(jourCle()).map(d=>{
-    const ok=faits.includes(d.id);
-    return `<button class="carte-choix menu-carriere" data-defi="${d.id}" style="--barre:${ok?'var(--gain)':'var(--accent)'};flex-direction:column;align-items:flex-start;gap:5px"><p>${escapeHtml(__(d.titre))}${ok?' ✓':''}</p><span style="font-size:12.5px;color:var(--text-muted)">${escapeHtml(__(d.desc))}</span><span style="font-size:12.5px;font-weight:600">${escapeHtml(__(d.poste))} · ${escapeHtml(__t("choix n°{#0}",[d.pick]))} · ${escapeHtml(objectifTexte(d.obj))}</span></button>`;
-  }).join('');
   const el=document.createElement('div');
   el.id='menu-fond';
   el.innerHTML=`<div class="menu-panneau" role="dialog" aria-modal="true" aria-label="${escapeHtml(__('Menu'))}">
     <div class="menu-tete"><h2 class="titre-ecran" style="font-size:22px">${escapeHtml(__('Menu'))}</h2><button id="menu-fermer" class="pilule" aria-label="${escapeHtml(__('Fermer'))}">✕</button></div>
     ${etat?`<button id="menu-reprendre" class="bouton">${escapeHtml(__('Reprendre'))}</button>`:''}
     <button id="menu-nouvelle" class="bouton" style="background:var(--surface);color:var(--text);border:1px solid var(--border)">${escapeHtml(__('Nouvelle carrière'))}</button>
-    <p class="byline" style="margin:14px 0 8px">${escapeHtml(__("CARRIÈRES DU JOUR"))}</p>
-    <p class="flavor" style="margin:0 0 8px">${escapeHtml(__("Un parcours déjà choisi pour toi. À toi de réussir l'objectif."))}</p>
-    <div class="pile-choix">${cartes}</div>
     ${defisHtml()}
   </div>`;
   document.body.appendChild(el);
@@ -96,11 +88,6 @@ function ouvrirMenu(){
     if(enCours()&&menuConfirme!=='nouvelle'){ menuConfirme='nouvelle'; nv.textContent=__("Confirmer : la progression sera perdue"); return; }
     fermerMenu(); reinitialiser(); accueilVu=true; render();
   };
-  el.querySelectorAll('.menu-carriere').forEach(b=>b.onclick=()=>{
-    const d=carriereParId(b.dataset.defi); if(!d) return;
-    if(enCours()&&menuConfirme!==d.id){ menuConfirme=d.id; b.querySelector('p').textContent=__("Confirmer : la progression sera perdue"); return; }
-    fermerMenu(); lancerCarriere(d); accueilVu=true; render();
-  });
   const f=q('#menu-fermer'); if(f) f.focus();
 }
 function monterBoutonMenu(){
@@ -125,4 +112,27 @@ function monterBarreBas(){
     if(enCours()&&!conf){ conf=true; r.textContent=__("Confirmer : la progression sera perdue"); r.classList.add('bb-alerte'); return; }
     reinitialiser(); accueilVu=true; render();
   };
+}
+
+/* Accueil : bloc à deux pages (défis du jour / carrières du jour), on glisse sur le côté */
+function carrieresAccueilHtml(){
+  const faits=carrieresFaites().faits;
+  const cartes=carrieresDuJour(jourCle()).map(d=>{
+    const ok=faits.includes(d.id);
+    return `<button type="button" class="carte-choix carriere-accueil" data-defi="${d.id}" style="--barre:${ok?'var(--gain)':'var(--accent)'};flex-direction:column;align-items:flex-start;gap:3px;text-align:left"><p>${escapeHtml(__(d.titre))}${ok?' ✓':''}</p><span style="font-size:12.5px;color:var(--text-muted)">${escapeHtml(__(d.desc))}</span></button>`;
+  }).join('');
+  return `<p class="byline" style="margin-bottom:8px">${escapeHtml(__("CARRIÈRES DU JOUR"))}</p><div class="pile-choix">${cartes}</div>`;
+}
+function swipeAccueilHtml(){
+  return `<div class="swipe-accueil"><div class="swipe-piste" id="swipe-piste"><section class="swipe-page">${defisHtml()}</section><section class="swipe-page"><div class="bloc-defis">${carrieresAccueilHtml()}</div></section></div><div class="swipe-points"><i class="on"></i><i></i></div></div>`;
+}
+function attacherSwipeAccueil(){
+  const p=document.getElementById('swipe-piste'); if(!p) return;
+  const pts=document.querySelectorAll('.swipe-points i');
+  p.addEventListener('scroll',()=>{ const i=Math.round(p.scrollLeft/Math.max(1,p.clientWidth)); pts.forEach((x,k)=>x.classList.toggle('on',k===i)); },{passive:true});
+  pts.forEach((x,k)=>x.onclick=()=>p.scrollTo({left:k*p.clientWidth,behavior:'smooth'}));
+  document.querySelectorAll('.carriere-accueil').forEach(b=>b.onclick=()=>{
+    const d=carriereParId(b.dataset.defi); if(!d) return;
+    lancerCarriere(d); accueilVu=true; render();
+  });
 }
