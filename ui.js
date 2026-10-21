@@ -274,7 +274,7 @@ function ecranReveal(entree,tab,stat){
     zone.innerHTML=`<span class="mot ${ok?'ok':'ko'}">${escapeHtml(ok?g[1]:g[2])}</span>`;
     if(apres){ const a=document.getElementById('tab-a'), b=document.getElementById('tab-b'); if(a){ a.textContent=apres.a; a.classList.add('bump'); } if(b){ b.textContent=apres.b; b.classList.add('bump'); } }
     if(ok){ Son.swish(); vibrer(60); if(termine) setTimeout(()=>{ Son.buzzer(); vibrer([80,40,80]); },450); } else { Son.contre(); Son.huee(); vibrer([30,40,120]); }
-  },1100);
+  },800);
   setTimeout(()=>{
     const zone=document.getElementById('apres'); if(!zone) return;
     const fin=termine&&apres?`<p class="fin-match ${apres.a>apres.b?'ok':'ko'}">${apres.a>apres.b?__('VICTOIRE'):__('DÉFAITE')} ${apres.a}–${apres.b}</p>`:'';
@@ -287,7 +287,7 @@ function ecranReveal(entree,tab,stat){
       <button id="btn-continuer" class="bouton">${libelle}</button>`;
     zone.classList.add('visible');
     document.getElementById('btn-continuer').onclick=()=>{ Son.clic(); render(); };
-  },2100);
+  },1500);
 }
 function bilanSaisonHtml(s){
   if(!s||typeof s!=='object') return '';

@@ -61,5 +61,5 @@
   };
   /* Nom court d'une équipe rivale (« les Lions » / « The Lions »). */
   window.__court=function(c){ c=String(c||''); if(L==='en'&&c.indexOf('les ')===0) return 'The '+c.slice(4); if(L==='fr'&&c.indexOf('The ')===0) return 'les '+c.slice(4); return c; };
-  if(!window.__EN_INLINE) document.write('<script src="en.js?v=20261021d"><\/script><script src="en2.js?v=20261021d"><\/script>');
+  if(!window.__EN_INLINE) document.write('<script src="en.js?v=20261021e"><\/script><script src="en2.js?v=20261021e"><\/script>');
 })();
