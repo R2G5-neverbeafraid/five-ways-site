@@ -217,19 +217,42 @@ function tableauHtml(t,score,classe){
     <div class="tab-eq droite"><b id="tab-b" class="tab-score">${s.b}</b><span class="tab-nom">${escapeHtml(t.nb)}</span><i style="background:${t.cb}"></i></div>
   </div>`;
 }
-function pourcentageOption(c){ return Math.round(clamp(etat.stats[c.stat]/100+c.mod,0.12,0.9)*100); }
+function bracketHtml(tour,stade){
+  const etapes=['1er tour','Demi-finales','Finale conf.','Finales'];
+  return `<div class="bracket">${etapes.map((n,i)=>{ const etat_=stade!==undefined?(i<stade-1||(stade===5)?'passe':i===stade-1?'elimine':''):(i<tour?'passe':i===tour?'courant':''); return `<div class="etape ${etat_}"><i></i><span>${escapeHtml(n)}</span></div>`; }).join('')}</div>`;
+}
+function renderFinReguliere(){
+  const s=etat.saisonSport, q=s.qualifie;
+  const prem=bracketHtml(0);
+  return `<div class="screen">
+    ${enteteMatch()}
+    <p class="logo" style="color:#F5C542">FIN DE LA SAISON RÉGULIÈRE</p>
+    <div class="bilan-saison anim">
+      <p class="byline">BILAN · ${etat.saison?'SAISON '+etat.saison:''}</p>
+      <div class="vd"><span class="chiffre"><b class="cnt" data-v="${s.v}">0</b> – <b class="cnt" data-v="${s.d}">0</b></span><span class="rang">${texteRang(s.rang)} de la conférence</span></div>
+    </div>
+    ${q?`<div class="annonce ok anim" style="animation-delay:.3s"><p class="annonce-t">QUALIFIÉ POUR LES PLAYOFFS</p><p class="annonce-s">Tu es ${texteRang(s.rang)}. 4 tours à gagner. À chaque tour, un match décisif : réussis ton coup et tu avances, rate-le et la saison s'arrête.</p></div>${prem}`
+      :`<div class="annonce ko anim" style="animation-delay:.3s"><p class="annonce-t">NON QUALIFIÉ</p><p class="annonce-s">Tu termines ${texteRang(s.rang)} : pas de playoffs cette saison. Seuls les 8 premiers de la conférence se qualifient.</p></div>`}
+    <button id="btn-suite-reg" class="bouton">${q?'Commencer les playoffs':'Voir le bilan de la saison'}</button>
+  </div>`;
+}
+function attacherFinReguliere(){
+  Son.buzzer(); vibrer([60,40,60]);
+  document.getElementById('btn-suite-reg').onclick=()=>{ Son.clic(); if(etat.playoffs) Son.foule(); avancerFinReguliere(); render(); };
+}
+function pourcentageOption(c){ const b=clamp(etat.stats[c.stat]/100+c.mod,0.12,0.9)+(etat.phase==='playoffs'?bonusPlayoffs():0); return Math.round(clamp(b,0.05,0.95)*100); }
 function renderMatch(){
   const m=etat.matchActuel;
   const rv=m.rivalId?rivaux().find(r=>r.id===m.rivalId):null;
   return `<div class="screen">
     ${enteteMatch()}
-    <p class="logo">MOMENT DE MATCH ${etat.matchsResultats.length+1}/${etat.matchsTotal}</p>
+    ${m.playoff?`<p class="logo" style="color:#F5C542">PLAYOFFS · ${escapeHtml((TOURS_PLAYOFFS[m.tour]||'').toUpperCase())}</p>${bracketHtml(m.tour)}`:`<p class="logo">MOMENT DE MATCH ${etat.matchsResultats.length+1}/${etat.matchsTotal}</p>`}
     ${tableauHtml(m.tableau)}
     <h1 class="titre-ecran">${escapeHtml(m.titre)}</h1>
     ${rv?`<div class="rival-card"><p class="rival-titre">RIVALITÉ ${pastilles(rv.niveau)}</p><p class="rival-ligne">Bilan face à ${escapeHtml(rv.court)} : ${rv.bilan.v}V – ${rv.bilan.d}D · enjeux amplifiés</p></div>`:''}
     <p class="flavor">${escapeHtml(m.contexte)}</p>
     <div class="pile-choix">${m.choix.map((c,i)=>`<button class="carte-choix carte-match" data-i="${i}" style="--barre:${COUL_STATS[c.stat]||'var(--border)'}"><p>${escapeHtml(c.texte)}</p><span class="pct"><b class="chiffre">${pourcentageOption(c)}</b>%<small>${escapeHtml(LBL[c.stat]||'')}</small></span></button>`).join('')}</div>
-    <p class="aide-geste">Ensuite, arrête la jauge dans la zone verte : jusqu'à +10 % de réussite.</p>
+    <p class="aide-geste">${m.playoff?'Adversaires de haut niveau : les pourcentages sont plus bas qu\'en saison régulière. ':''}Ensuite, arrête la jauge dans la zone verte : jusqu\'à +10 %.</p>
     ${statsMiniHtml()}
   </div>`;
 }
@@ -282,9 +305,13 @@ function ecranReveal(entree,tab,stat){
   setTimeout(()=>{
     const zone=document.getElementById('apres'); if(!zone) return;
     const fin=termine&&apres?`<p class="fin-match ${apres.a>apres.b?'ok':'ko'}">${apres.a>apres.b?'VICTOIRE':'DÉFAITE'} ${apres.a}–${apres.b}</p>`:'';
-    zone.innerHTML=`${fin}<p class="narration">${escapeHtml(entree.narration)}</p>
+    const iss=entree.issue;
+    const banniere=iss?`<div class="annonce ${iss.avance?'ok':'ko'}"><p class="annonce-t">${iss.champion?'CHAMPION !':iss.avance?'TU PASSES : '+escapeHtml((iss.suivant||'').toUpperCase()):'ÉLIMINÉ'}</p><p class="annonce-s">${iss.champion?'Tu remportes le titre.':iss.avance?escapeHtml(iss.nom)+' gagné. Prochain match décisif.':'Ta saison s\'arrête en '+escapeHtml(iss.nom.toLowerCase())+'.'}</p></div>`:'';
+    if(iss){ if(iss.champion){ Son.succes(); Son.foule(); vibrer([80,40,80,40,160]); } else if(!iss.avance){ Son.huee(); } else Son.succes(); }
+    const libelle=iss?((iss.avance&&!iss.champion)?'Tour suivant':'Voir le bilan de la saison'):(etat.phase==='finreguliere'?'Fin de la saison régulière':'Continuer');
+    zone.innerHTML=`${fin}${banniere}<p class="narration">${escapeHtml(entree.narration)}</p>
       <div class="fil">${(entree.actus||[]).map(a=>`<div class="actu"><span class="src">${escapeHtml(a.src)}</span><span>${escapeHtml(a.texte)}</span></div>`).join('')}</div>
-      <button id="btn-continuer" class="bouton">Continuer</button>`;
+      <button id="btn-continuer" class="bouton">${libelle}</button>`;
     zone.classList.add('visible');
     document.getElementById('btn-continuer').onclick=()=>{ Son.clic(); render(); };
   },2100);
@@ -305,7 +332,7 @@ function renderResultat(){
   const evtsHtml=r.evenements.map(e=>`<span class="badge">${escapeHtml(e)}</span>`).join('');
   const liste=r.matchs||(r.match?[r.match]:[]);
   const matchHtml=liste.map((m,i)=>`<div class="match-issue anim ${m.reussi?'ok':'ko'}" style="animation-delay:${0.35+i*0.25}s">
-      <p class="match-titre">${escapeHtml(m.titre)} — ${m.reussi?'Réussi':'Raté'}${m.p?' · '+Number(m.p)+' %':''}${m.geste==='parfait'?' · geste parfait':''}</p>
+      <p class="match-titre">${m.playoff?'PLAYOFFS · ':''}${escapeHtml(m.titre)} — ${m.reussi?'Réussi':'Raté'}${m.p?' · '+Number(m.p)+' %':''}${m.geste==='parfait'?' · geste parfait':''}</p>
       <p class="match-choix">${escapeHtml(m.texte)}</p>
       <p class="match-narration">${escapeHtml(m.narration)}</p>
       ${m.rival?`<div class="rival-card"><p class="rival-titre">DUEL — ${escapeHtml(m.rival.nom)} ${pastilles(m.rival.niveau)}</p><p class="rival-ligne">Bilan : ${m.rival.v}V – ${m.rival.d}D</p></div>`:''}
@@ -386,7 +413,8 @@ function renderEcran(){
   if(etat.phase==='chemin'){ app.innerHTML=renderChemin(); attacherChemin(); return; }
   if(etat.phase==='combine'){ app.innerHTML=renderCombine(); attacherCombine(); return; }
   if(etat.phase==='draftnight'){ app.innerHTML=renderDraftNight(); attacherDraftNight(); return; }
-  if(etat.phase==='match'){ app.innerHTML=renderMatch(); attacherMatch(); return; }
+  if(etat.phase==='match'||etat.phase==='playoffs'){ app.innerHTML=renderMatch(); attacherMatch(); return; }
+  if(etat.phase==='finreguliere'){ app.innerHTML=renderFinReguliere(); attacherFinReguliere(); return; }
   if(etat.phase==='resultat'){ app.innerHTML=renderResultat(); attacherResultat(); return; }
   if(etat.phase==='retraite'){ app.innerHTML=renderRetraite(); attacherRetraite(); return; }
   app.innerHTML=renderTour(); attacherTour();

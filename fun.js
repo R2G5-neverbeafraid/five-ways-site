@@ -25,7 +25,7 @@ function genererTableau(m){
   let q, t, diff;
   const id=m.id;
   if(id==='prolongation'){ q=5; t='4:'+String(10+alea(40)); diff=0; }
-  else if(id==='coupe_finale'||(id==='duel'&&Math.random()<0.5)){ q=4; t='0:0'+(2+alea(7)); diff=-(1+alea(2)); }
+  else if(m.playoff||id==='coupe_finale'||(id==='duel'&&Math.random()<0.5)){ q=4; t='0:0'+(2+alea(7)); diff=-(1+alea(2)); }
   else if(id==='faute_rapide'){ q=1; t='7:'+String(10+alea(40)); diff=pick([-2,0,1]); }
   else { q=pick([2,3,4,4,4]); t=(q===4?pick(['0','1','1','2']):String(2+alea(8)))+':'+String(10+alea(49)); diff=pick([-3,-2,-1,0,0,1,2]); }
   const base=62+alea(34);
@@ -40,15 +40,11 @@ function scoreApres(tab,reussi){
 
 /* ---------- Saison sportive (bilan, classement, playoffs) ---------- */
 const STADES=['Non qualifié','Éliminé au premier tour','Éliminé en demi-finales','Éliminé en finale de conférence','Finaliste','Champion'];
-function genererSaisonSportive(titre,reussis,total,moyenne){
+function genererSaisonRegliere(reussis,total,moyenne){
   const force=clamp(0.30+etat.meta.coteEquipe/160+etat.meta.alchimieEquipe/400+(total?reussis/total:0.5)*0.12+(moyenne-55)/300+(Math.random()-0.5)*0.12,0.2,0.88);
-  let v=clamp(Math.round(82*force),12,72);
-  let rang=clamp(1+Math.round((0.9-force)*17),1,15);
-  let stade;
-  if(titre){ v=Math.max(v,50); rang=Math.min(rang,6); stade=5; }
-  else if(rang>8) stade=0;
-  else { const maxR=rang<=2?4:rang<=5?3:rang<=7?2:1; stade=1+alea(maxR); if(stade>4) stade=4; }
-  return {v,d:82-v,rang,stade};
+  const v=clamp(Math.round(82*force),12,72);
+  const rang=clamp(1+Math.round((0.9-force)*17),1,15);
+  return {v,d:82-v,rang};
 }
 function texteRang(r){ return r===1?'1er':r+'e'; }
 
