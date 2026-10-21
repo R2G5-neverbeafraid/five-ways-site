@@ -123,7 +123,7 @@ function genererTour(){
   const dernier=recents[recents.length-1];
   const intros=etat.saison>=2?SCENARIOS.filter(s=>s.intro&&s.cond(etat)):[];
   const choisi=etat.saison===1?specifiques.find(s=>s.id==='rookie'):specifiques[Math.floor(Math.random()*specifiques.length)];
-  const coupes=base.filter(s=>s.coupe&&s.cond(etat)&&!recents.includes(s.id));
+  const coupes=base.filter(s=>s.coupe&&s.cond(etat));
   const sc=coupes[0]||intros[0]||choisi||generiques[0]
     ||base.filter(s=>s.generique&&s.cond(etat)&&s.id!==dernier)[0]
     ||base.filter(s=>s.cond(etat)&&s.id!==dernier)[0]
@@ -226,8 +226,8 @@ function resoudreMatch(opt){
   if(etat.scenarioActuel&&etat.scenarioActuel.coupe){
     const [poule,demi,finale]=etat.matchsResultats.slice(0,3).map(m=>m.reussi);
     const nomC=etat.scenarioActuel.coupe.nom, avec=nomPays(etat)==='ta sélection'?'':' avec '+etat.pays;
-    if(poule&&demi&&finale){ medaille='or'; etat.distinctions.medailles=(etat.distinctions.medailles||0)+3; evenements.push(`Médaille d'or — ${nomC}${avec} !`); }
-    else if(poule&&demi){ medaille='argent'; etat.distinctions.medailles=(etat.distinctions.medailles||0)+2; evenements.push(`Médaille d'argent — ${nomC}${avec}`); }
+    if(poule&&demi&&finale){ medaille='or'; etat.distinctions.medailles=(etat.distinctions.medailles||0)+2; evenements.push(`Médaille d'or — ${nomC}${avec} !`); }
+    else if(poule&&demi){ medaille='argent'; etat.distinctions.medailles=(etat.distinctions.medailles||0)+1; evenements.push(`Médaille d'argent — ${nomC}${avec}`); }
     else if(demi||(poule&&Math.random()<0.4)){ medaille='bronze'; etat.distinctions.medailles=(etat.distinctions.medailles||0)+1; evenements.push(`Médaille de bronze — ${nomC}${avec}`); }
   }
   const reussis=etat.matchsResultats.filter(m=>m.reussi).length;
@@ -279,7 +279,7 @@ function calculerScore(){
   let titres=0;
   for(let i=0;i<d.titres;i++) titres+=barTitres[Math.min(i,3)];
   titres=Math.min(30,titres);
-  const distinctions=Math.min(25, d.allStar*2 + d.mvp*8 + (d.medailles||0));
+  const distinctions=Math.min(25, d.allStar*2 + d.mvp*8 + Math.min(8,d.medailles||0));
   const stats=Math.max(0, Math.min(25, Math.round((moyenneStats()-40)/60*25)));
   const seasons=etat.saison-1;
   let longevite=Math.min(12,seasons);

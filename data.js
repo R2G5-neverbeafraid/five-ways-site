@@ -202,7 +202,7 @@ const MATCH_SITUATIONS=[
     o('Lire le jeu et provoquer les erreurs','basketIQ',0.05,0.07,{basketIQ:1,reputation:3},{reputation:-1},'Tu anticipes chaque passe et lances les contre-attaques.','Ton anticipation te trahit : interception inutile.'),
     o('Enflammer la salle avec un tir lointain','scoring',-0.15,0.1,{reputation:6},{reputation:-3},'Ton tir lointain met le feu à la salle.','Le tir est manqué et l\'adversaire contre.')
   ]},
-  {id:'coupe_finale',titre:'La finale',contexte:"La finale de la {coupe}. {pays} n'a pas gagné ce titre depuis longtemps. Dernière possession ou presque.",choix:[
+  {id:'coupe_finale',titre:'La finale',contexte:"La finale — {coupe}. {pays} n'a pas gagné ce titre depuis longtemps. Dernière possession ou presque.",choix:[
     o('Prendre le tir de la victoire','scoring',-0.15,0.14,{reputation:8},{reputation:-4},'Le ballon rentre : {pays} est champion !','Le tir sort. Il faudra attendre la prochaine édition.'),
     o('Défendre la dernière possession','defense',0.0,0.1,{reputation:5,defense:1},{reputation:-2},'Stop défensif : la finale est à toi.','L\'adversaire marque dans les dernières secondes.'),
     o('Faire la passe décisive','playmaking',0.0,0.1,{alchimieEquipe:5,reputation:4},{alchimieEquipe:-3},'Ton coéquipier reçoit seul et marque.','La passe est interceptée à la dernière seconde.'),
@@ -237,6 +237,10 @@ const c=(axe,texte,effets)=>({axe,texte,effets});
 const CONTINENTS={'RDC':'Afrique','Cameroun':'Afrique','Sénégal':'Afrique','Nigeria':'Afrique','Angola':'Afrique','France':'Europe','Espagne':'Europe','Serbie':'Europe','USA':'Amériques','Canada':'Amériques','Brésil':'Amériques','Japon':'Asie'};
 const COUPES_CONTINENT={'Afrique':"Coupe d'Afrique de basket",'Europe':"Coupe d'Europe de basket",'Amériques':'Coupe des Amériques de basket','Asie':"Coupe d'Asie de basket"};
 const COUPE_MONDE='Coupe du Monde de basket de la FIB';
+// Calendrier : continentale tous les 2 ans (saisons impaires, selon forme/réputation),
+// Coupe du Monde de la FIB tous les 4 ans (saison%4===2), Jeux Olympiques tous les 4 ans, 2 ans après la Coupe du Monde (saison%4===0).
+const JEUX_OLYMPIQUES='Jeux Olympiques de basket';
+function selectionne(e){ return (e.saison*37+e.age*11)%100 < 45+e.meta.reputation*0.5; }
 function nomPays(e){ return (e.pays&&e.pays!=='Autre')?e.pays:'ta sélection'; }
 function coupeContinent(e){ const c=CONTINENTS[e.pays]; return c?COUPES_CONTINENT[c]:null; }
 function pointFaible(e){
@@ -385,7 +389,7 @@ const SCENARIOS=[
     c('Vie perso','Partir en voyage pour recharger les batteries',{risqueBlessure:-6,alchimieEquipe:2}),
     c('Risque / Legacy','Défier un rival lors d\'un camp d\'été public',{reputation:5,risqueBlessure:3})
   ]},
-  {id:'coupe_continent',generique:false,cond:e=>e.saison>=4&&e.saison%4===0&&!!coupeContinent(e),
+  {id:'coupe_continent',generique:false,cond:e=>e.saison>=3&&e.saison%2===1&&!!coupeContinent(e)&&selectionne(e),
    question:'Une coupe continentale approche : comment la prépares-tu ?',
    coupe:e=>({nom:coupeContinent(e),type:'continent'}),
    contexte:e=>`La ${coupeContinent(e)} réunit les meilleures sélections de la région. ${nomPays(e)==='ta sélection'?'Ta sélection':e.pays} compte sur toi, mais ta franchise aussi.`,
@@ -406,6 +410,17 @@ const SCENARIOS=[
     c('Image / Marque',`Signer un contrat de marque lié à la Coupe du Monde`,{reputation:6,alchimieEquipe:-1}),
     c('Vie perso','Voyager avec ta famille et profiter de l\'événement',{alchimieEquipe:3,risqueBlessure:-5}),
     c('Risque / Legacy','Annoncer que tu veux le titre mondial et le MVP du tournoi',{reputation:6,scoring:2,risqueBlessure:4})
+  ]},
+  {id:'jeux_olympiques',generique:false,cond:e=>e.saison>=4&&e.saison%4===0,
+   question:'Les Jeux Olympiques approchent : comment les abordes-tu ?',
+   coupe:e=>({nom:JEUX_OLYMPIQUES,type:'jo'}),
+   contexte:e=>`Tous les quatre ans, deux ans après la Coupe du Monde de la FIB, les Jeux Olympiques réunissent les meilleures sélections de la planète. ${nomPays(e)==='ta sélection'?'Ta sélection':e.pays} rêve d'une médaille, et tu es au cœur de ce rêve.`,
+   choix:e=>[
+    c('Performance','Suivre un programme de préparation spécial pour être à ton pic le jour J',{athletisme:2,scoring:1,basketIQ:1,risqueBlessure:2}),
+    c('Carrière / Contrat','Négocier une clause « Jeux » avec ta franchise : libération et prime à la clé',{coteEquipe:2,reputation:3}),
+    c('Image / Marque','Devenir le visage de ta délégation dans les médias',{reputation:6,alchimieEquipe:-1}),
+    c('Vie perso','Emmener ta famille au village olympique et profiter de l\'instant',{alchimieEquipe:3,risqueBlessure:-5}),
+    c('Risque / Legacy','Annoncer que tu vises l\'or, rien d\'autre',{reputation:7,scoring:2,risqueBlessure:4})
   ]},
   {id:'sponsor',generique:false,cond:e=>e.saison>=2&&e.meta.reputation>=60&&e.age<=34,
    question:'Une grande marque veut faire de toi son ambassadeur : que réponds-tu ?',
@@ -675,7 +690,7 @@ const SCENARIO_MATCHS={
   fragile:['blessure','retour'], fragile2:['blessure','retour','remontee'], tension:['technique','rival'], tension2:['technique','rival'],
   cote_basse:['trade_rumeur','rival'], cote_basse2:['trade_rumeur','exterieur'], contrat:['trade_rumeur','lancers'],
   veteran:['remontee','blessure','lancers'], veteran2:['remontee','playoffs','lancers'], mi_carriere:['playoffs','remontee','trade_rumeur'],
-  mi_carriere2:['blessure','remontee'], coupe_continent:[], coupe_monde:[], sponsor:['exterieur','rival'], nouveau_coach:['technique','remontee'], jeune_talent:['jeune_defenseur','rival'], etudes:['faute_rapide','exterieur'], academie:['jeune_defenseur','remontee'], documentaire:['exterieur','buzzer'], deadline:['trade_rumeur','remontee'], fans_hostiles:['exterieur','faute_rapide'], prolongation_contrat:['trade_rumeur','prolongation'], point_faible:['faute_rapide','lancers'], vieillissement:['blessure','prolongation'], montee:['rival','exterieur','buzzer'], ete_calme:[], ete_calme2:[]
+  mi_carriere2:['blessure','remontee'], coupe_continent:[], coupe_monde:[],jeux_olympiques:[], sponsor:['exterieur','rival'], nouveau_coach:['technique','remontee'], jeune_talent:['jeune_defenseur','rival'], etudes:['faute_rapide','exterieur'], academie:['jeune_defenseur','remontee'], documentaire:['exterieur','buzzer'], deadline:['trade_rumeur','remontee'], fans_hostiles:['exterieur','faute_rapide'], prolongation_contrat:['trade_rumeur','prolongation'], point_faible:['faute_rapide','lancers'], vieillissement:['blessure','prolongation'], montee:['rival','exterieur','buzzer'], ete_calme:[], ete_calme2:[]
 };
 const RIVALITES_EQUIPES=[
   {a:'lac',b:'bos',detail:'le classique des finales'},
