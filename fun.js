@@ -41,9 +41,9 @@ function scoreApres(tab,reussi){
 /* ---------- Saison sportive (bilan, classement, playoffs) ---------- */
 const STADES=['Non qualifié','Éliminé au premier tour','Éliminé en demi-finales','Éliminé en finale de conférence','Finaliste','Champion'];
 function genererSaisonRegliere(reussis,total,moyenne){
-  const force=clamp(0.30+etat.meta.coteEquipe/160+etat.meta.alchimieEquipe/400+(total?reussis/total:0.5)*0.12+(moyenne-55)/300+(Math.random()-0.5)*0.12,0.2,0.88);
+  const force=clamp(-0.02+etat.meta.coteEquipe/300+etat.meta.alchimieEquipe/700+(total?reussis/total:0.5)*0.30+(moyenne-55)/200+(Math.random()-0.5)*0.12,0.15,0.90);
   const v=clamp(Math.round(82*force),12,72);
-  const rang=clamp(1+Math.round((0.9-force)*17),1,15);
+  const rang=clamp(1+Math.round((0.78-force)*22),1,15);
   return {v,d:82-v,rang};
 }
 function texteRang(r){ return r===1?'1er':r+'e'; }

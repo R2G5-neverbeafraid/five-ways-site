@@ -147,7 +147,7 @@ const MATCH_SITUATIONS=[
   {id:'rival',titre:'Un rival te provoque',contexte:"Ton rival direct te chambre devant tout le stade. Le match est tendu et tout le monde regarde.",choix:[
     o('Répondre sur le terrain en 1 contre 1','scoring',-0.05,0.07,{reputation:5},{reputation:-3},'Tu le prends de vitesse et tu marques sous ses yeux.','Il te contre et la salle se retourne contre toi.'),
     o('Ignorer et rester concentré','basketIQ',0.1,0.04,{basketIQ:1,alchimieEquipe:2},{reputation:-1},'Tu gardes la tête froide et ton équipe suit.','Tu passes pour quelqu\'un qui se laisse marcher dessus.'),
-    o('Demander à le défendre toi-même','defense',-0.05,0.07,{reputation:4,defense:1},{reputation:-2},'Tu l\'étouffes toute la deuxième mi-temps.','Il te passe dessus à répétition.'),
+    o('Te proposer pour le défendre','defense',-0.05,0.07,{reputation:4,defense:1},{reputation:-2},'Tu l\'étouffes toute la deuxième mi-temps.','Il te passe dessus à répétition.'),
     o('Le chambrer publiquement','basketIQ',-0.15,0.08,{reputation:6},{reputation:-4,alchimieEquipe:-2},'Le stade est dans ta poche, le défi est lancé.','Le geste est mal pris et les médias s\'en saisissent.'),
     o('T\'associer à un coéquipier pour le piéger','playmaking',0.0,0.06,{alchimieEquipe:4,reputation:2},{alchimieEquipe:-1},'Le piège fonctionne à la perfection.','Le rival lit le coup et en profite.')
   ]},
