@@ -915,5 +915,6 @@ Object.assign(window.EN,{
 "Vie perso": "Personal life",
 "Risque": "Risk",
 "les ": "The ",
-"Ta sélection": "Your national team"
+"Ta sélection": "Your national team",
+"NEUTRE": "NEUTRAL"
 });

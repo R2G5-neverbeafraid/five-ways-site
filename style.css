@@ -201,3 +201,7 @@
 .select-pays:focus{ outline:2px solid var(--accent); outline-offset:1px; }
 #btn-langue{ position:fixed; top:calc(10px + env(safe-area-inset-top,0px)); right:56px; z-index:20; height:36px; padding:0 12px; border-radius:18px; border:1px solid var(--border); background:var(--surface); color:var(--text); font:600 12.5px/1 'Inter',system-ui,sans-serif; letter-spacing:.06em; cursor:pointer; }
 #btn-langue:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+.tab-eq i.drap{ width:22px; height:34px; display:flex; flex-direction:column; overflow:hidden; border-radius:4px; }
+.tab-eq i.drap u{ flex:1; display:block; text-decoration:none; }
+.tab-eq i.drap{ width:22px; height:34px; display:flex; flex-direction:column; overflow:hidden; border-radius:4px; }
+.tab-eq i.drap u{ flex:1; display:block; text-decoration:none; }

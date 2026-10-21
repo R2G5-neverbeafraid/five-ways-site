@@ -7,12 +7,19 @@ function alea(n){ return Math.floor(Math.random()*n); }
 function genererTableau(m){
   const f=etat.franchise;
   const dom=Math.random()<0.5;
-  let na, nb, ca, cb;
+  let na, nb, ca, cb, fa=null, fb=null;
   if(m.coupe){
     const pays=etat.pays&&etat.pays!=='Autre'?etat.pays:null;
     na=pays&&CODE3[pays]?CODE3[pays]:'SEL';
-    const adv=pick(Object.keys(CONTINENTS).filter(p=>p!==pays));
+    // Adversaires cohérents : coupe continentale = pays du même continent ; Coupe du Monde / JO = tous les pays.
+    // Choix déterministe (saison + manche) pour ne pas retrouver le même adversaire dans la même compétition.
+    const rangC=['coupe_poule','coupe_demi','coupe_finale'].indexOf(m.id);
+    const typeC=etat.scenarioActuel&&etat.scenarioActuel.coupe?etat.scenarioActuel.coupe.type:'monde';
+    let cand=Object.keys(CONTINENTS).filter(p=>p!==pays);
+    if(typeC==='continent'&&pays) cand=cand.filter(p=>CONTINENTS[p]===CONTINENTS[pays]);
+    const adv=cand.length?cand[((etat.saison||0)*7+13+Math.max(0,rangC)*5)%cand.length]:pick(Object.keys(CONTINENTS));
     nb=CODE3[adv]||abrev(adv); ca='#4C6FFF'; cb='#E5484D';
+    fa=(pays&&DRAPEAUX[pays])||null; fb=DRAPEAUX[adv]||null;
   } else {
     let opp=null;
     const rv=m.rivalId?rivaux().find(r=>r.id===m.rivalId):null;
@@ -29,7 +36,7 @@ function genererTableau(m){
   else if(id==='faute_rapide'){ q=1; t='7:'+String(10+alea(40)); diff=pick([-2,0,1]); }
   else { q=pick([2,3,4,4,4]); t=(q===4?pick(['0','1','1','2']):String(2+alea(8)))+':'+String(10+alea(49)); diff=pick([-3,-2,-1,0,0,1,2]); }
   const base=62+alea(34);
-  return {na,nb,ca,cb,q,t,a:base+diff,b:base,dom};
+  const res={na,nb,ca,cb,q,t,a:base+diff,b:base,dom}; if(fa) res.fa=fa; if(fb) res.fb=fb; if(m.coupe) res.neutre=true; return res;
 }
 function scoreApres(tab,reussi){
   let a=tab.a, b=tab.b;

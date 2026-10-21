@@ -156,13 +156,17 @@ function enteteMatch(){
   return __t("<div class=\"entete-tour\">\n      <span class=\"puce\" style=\"background:{#0}\"></span>\n      <span class=\"meta\">Saison {#1}</span>\n      <span class=\"meta\">{#2} ans</span>\n      <span class=\"meta\">{#3} {#4}</span>\n    </div>",[f.couleur,etat.saison,etat.age,escapeHtml(f.ville),escapeHtml(f.nom)]);
 }
 function libelleTemps(t){ return (t.q>=5?__('PROL.'):'Q'+t.q)+' · '+escapeHtml(t.t); }
+function pastilleEquipe(c,f){
+  if(Array.isArray(f)&&f.length===3) return `<i class="drap">${f.map(x=>`<u style="background:${x}"></u>`).join('')}</i>`;
+  return `<i style="background:${c}"></i>`;
+}
 function tableauHtml(t,score,classe){
   if(!t) return '';
   const s=score||{a:t.a,b:t.b};
   return `<div class="tableau ${classe||''}">
-    <div class="tab-eq"><i style="background:${t.ca}"></i><span class="tab-nom">${escapeHtml(t.na)}</span><b id="tab-a" class="tab-score">${s.a}</b></div>
-    <div class="tab-centre"><span class="tab-temps">${libelleTemps(t)}</span><span class="tab-dom">${t.dom?__("À DOMICILE"):__("À L'EXTÉRIEUR")}</span></div>
-    <div class="tab-eq droite"><b id="tab-b" class="tab-score">${s.b}</b><span class="tab-nom">${escapeHtml(t.nb)}</span><i style="background:${t.cb}"></i></div>
+    <div class="tab-eq">${pastilleEquipe(t.ca,t.fa)}<span class="tab-nom">${escapeHtml(t.na)}</span><b id="tab-a" class="tab-score">${s.a}</b></div>
+    <div class="tab-centre"><span class="tab-temps">${libelleTemps(t)}</span><span class="tab-dom">${t.neutre?__("NEUTRE"):t.dom?__("À DOMICILE"):__("À L'EXTÉRIEUR")}</span></div>
+    <div class="tab-eq droite"><b id="tab-b" class="tab-score">${s.b}</b><span class="tab-nom">${escapeHtml(t.nb)}</span>${pastilleEquipe(t.cb,t.fb)}</div>
   </div>`;
 }
 function bracketHtml(tour,stade){

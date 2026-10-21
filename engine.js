@@ -413,7 +413,8 @@ function assainir(s){
   const t=s.matchActuel&&s.matchActuel.tableau;
   if(t&&typeof t==='object'){
     const hex=v=>/^#[0-9A-Fa-f]{6}$/.test(v)?v:'#4C6FFF', ab=v=>String(v||'').replace(/[^A-Z]/g,'').slice(0,4)||'EQP';
-    s.matchActuel.tableau={na:ab(t.na),nb:ab(t.nb),ca:hex(t.ca),cb:hex(t.cb),q:num(t.q,1,5,4),t:/^\d{1,2}:\d{2}$/.test(String(t.t))?String(t.t):'0:30',a:num(t.a,0,250,80),b:num(t.b,0,250,80),dom:!!t.dom};
+    s.matchActuel.tableau={na:ab(t.na),nb:ab(t.nb),ca:hex(t.ca),cb:hex(t.cb),q:num(t.q,1,5,4),t:/^\d{1,2}:\d{2}$/.test(String(t.t))?String(t.t):'0:30',a:num(t.a,0,250,80),b:num(t.b,0,250,80),dom:!!t.dom,neutre:!!t.neutre};
+    if(Array.isArray(t.fa)&&t.fa.length===3) s.matchActuel.tableau.fa=t.fa.map(hex); if(Array.isArray(t.fb)&&t.fb.length===3) s.matchActuel.tableau.fb=t.fb.map(hex);
   } else if(s.matchActuel) delete s.matchActuel.tableau;
   return true;
 }
