@@ -1,0 +1,50 @@
+name: Claude Code - modifications automatiques
+
+# Se lance à la demande (onglet Actions > Run workflow) ou quand tu ajoutes
+# le label "claude" à une issue. Claude modifie le jeu et ouvre une Pull Request.
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: "Ce que Claude doit faire sur le jeu"
+        required: true
+        type: string
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  claude:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'claude'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Claude Code Base Action
+        uses: anthropics/claude-code-base-action@beta
+        with:
+          prompt: |
+            Tu travailles sur Five Ways, un jeu de simulation de carrière de basket
+            en HTML/CSS/JavaScript (index.html, style.css, data.js, engine.js, ui.js).
+            Règles : villes réelles mais noms de franchises et de joueurs inventés,
+            jamais de marque déposée ; 5 choix par tour, un par axe caché, ordre aléatoire ;
+            pas de question générique ; palette bleu nuit du projet.
+            Demande : ${{ github.event.inputs.prompt || github.event.issue.title }}
+            ${{ github.event.issue.body }}
+            Fais uniquement les modifications demandées, puis vérifie la syntaxe
+            avec node --check sur chaque fichier .js.
+          allowed_tools: "Read,Edit,Write,Glob,Grep,Bash(node --check:*)"
+          max_turns: "20"
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Ouvrir une Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: claude/auto-${{ github.run_id }}
+          title: "Claude : ${{ github.event.inputs.prompt || github.event.issue.title }}"
+          commit-message: "Modification automatique par Claude Code"
+          body: "Modification faite automatiquement par Claude Code. Relis le diff avant de fusionner."
