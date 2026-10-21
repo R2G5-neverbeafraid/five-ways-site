@@ -4,9 +4,23 @@
 /* ---------- Tableau d'affichage ---------- */
 function abrev(s){ return String(s||'').normalize('NFD').replace(/[^A-Za-z]/g,'').slice(0,3).toUpperCase()||'EQP'; }
 function alea(n){ return Math.floor(Math.random()*n); }
+/* Le tableau d'affichage doit dire la même chose que le texte de la situation (score, quart-temps, temps restant). diff = ton équipe − adversaire. */
+const SCORE_SITUATION={
+  contre_attaque:()=>({q:4,t:'0:06',diff:1}),
+  mi_temps:()=>({q:2,t:'0:00',diff:-10}),
+  mauvaise_passe:()=>({q:4,t:pick(['1:','1:','0:'])+String(10+alea(45)),diff:pick([-2,-1,0,1])}),
+  duel_pivot:()=>({q:pick([2,3]),t:String(1+alea(9))+':'+String(10+alea(49)),diff:pick([-4,-3,-1,0,1])}),
+  buzzer:()=>({q:4,t:'0:06',diff:0}),
+  blessure:()=>({q:3,t:String(2+alea(7))+':'+String(10+alea(49)),diff:pick([-3,-2,-1,0,1,2])}),
+  remontee:()=>({q:4,t:'8:00',diff:-15}),
+  lancers:()=>({q:4,t:'0:02',diff:-1}),
+  playoffs:()=>({q:2,t:'0:00',diff:-4}),
+  trade_rumeur:()=>({q:1,t:'12:00',diff:0}),
+  prolongation:()=>({q:5,t:'5:00',diff:0})
+};
 function genererTableau(m){
   const f=etat.franchise;
-  const dom=Math.random()<0.5;
+  const dom=m.id==='exterieur'?false:Math.random()<0.5;
   let na, nb, ca, cb, fa=null, fb=null, oppId=null;
   if(m.coupe){
     const pays=etat.pays&&etat.pays!=='Autre'?etat.pays:null;
@@ -31,7 +45,9 @@ function genererTableau(m){
   }
   let q, t, diff;
   const id=m.id;
-  if(id==='prolongation'){ q=5; t='4:'+String(10+alea(40)); diff=0; }
+  const sc=SCORE_SITUATION[id]&&!m.coupe?SCORE_SITUATION[id]():null;
+  if(sc){ q=sc.q; t=sc.t; diff=sc.diff; }
+  else if(id==='prolongation'){ q=5; t='4:'+String(10+alea(40)); diff=0; }
   else if(m.playoff||id==='coupe_finale'||(id==='duel'&&Math.random()<0.5)){ q=4; t='0:0'+(2+alea(7)); diff=-(1+alea(2)); }
   else if(id==='faute_rapide'){ q=1; t='7:'+String(10+alea(40)); diff=pick([-2,0,1]); }
   else { q=pick([2,3,4,4,4]); t=(q===4?pick(['0','1','1','2']):String(2+alea(8)))+':'+String(10+alea(49)); diff=pick([-3,-2,-1,0,0,1,2]); }
