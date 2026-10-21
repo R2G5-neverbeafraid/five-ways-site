@@ -221,7 +221,7 @@ function attacherMatch(){
 function renderResultat(){
   const r=etat.dernierResultat;
   const f=etat.franchise;
-  const deltasHtml=Object.entries(r.deltas).map(([k,v])=>`<span class="delta ${v>0?'pos':'neg'}">${LIBELLES_STATS[k]} ${v>0?'▲ +':'▼ '}${v}</span>`).join('');
+  const deltasHtml=Object.keys(LIBELLES_STATS).map(k=>{const v=r.deltas[k];return v?`<span class="delta ${v>0?'pos':'neg'}">${LIBELLES_STATS[k]} ${v>0?'▲ +':'▼ '}${v}</span>`:`<span class="delta">${LIBELLES_STATS[k]} =</span>`;}).join('');
   const evtsHtml=r.evenements.map(e=>`<span class="badge">${escapeHtml(e)}</span>`).join('');
   const liste=r.matchs||(r.match?[r.match]:[]);
   const matchHtml=liste.map(m=>`<div class="match-issue ${m.reussi?'ok':'ko'}">
