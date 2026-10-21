@@ -61,7 +61,9 @@ function attacherDraftNight(){
   document.getElementById('btn-rejoindre').onclick=()=>{ etat.file=[]; if(Math.random()<probSponsor()) etat.file.push('sponsor'); suiteHorsSaison(); render(); };
 }
 function posteCourt(p){ if(LANG==='en'){ return ({'Meneur':'PG','Arrière':'SG','Ailier':'SF','Ailier fort':'PF','Pivot':'C'})[p]||String(p).toUpperCase().slice(0,3); } return String(p).toUpperCase().slice(0,3); }
-const DOMINANTE={'Meneur':'PLA','Arrière':'SCO','Ailier':'ATH','Ailier fort':'DEF','Pivot':'IQ'};
+/* Les 4 atouts d'un joueur type à chaque poste, du plus important au moins important. */
+const DOMINANTE={'Meneur':['playmaking','basketIQ','scoring','athletisme'],'Arrière':['scoring','athletisme','playmaking','basketIQ'],'Ailier':['athletisme','scoring','defense','playmaking'],'Ailier fort':['defense','athletisme','scoring','basketIQ'],'Pivot':['defense','athletisme','basketIQ','scoring']};
+function atoutsPosteHtml(p){ return `<span class="tags-poste">${(DOMINANTE[p]||[]).map(k=>`<i style="color:${COUL_STATS[k]}">${LBL[k]}</i>`).join('')}</span>`; }
 const GABARITS={
   'Longiligne':{desc:__("Bras longs, explosif, moins de masse"),bonus:{athletisme:4,defense:1},malus:{playmaking:-3}},
   'Équilibré':{desc:__("Aucun point faible marqué"),bonus:{basketIQ:2},malus:{}},
@@ -130,7 +132,7 @@ function renderCreation(){
     corps=__t("<h1 class=\"titre-ecran\">Ton joueur</h1>\n    <label class=\"champ\"><span>Nom</span><input id=\"champ-nom\" type=\"text\" placeholder=\"NOM DU JOUEUR\" value=\"{#0}\" maxlength=\"18\" style=\"text-transform:uppercase\"></label>\n    <div class=\"champ\"><span>Sur le maillot : <b style=\"color:var(--text)\" id=\"apercu-nom\">{#1}</b></span></div>\n    <div class=\"champ\"><span>Nationalité</span>{#2}</div>",[escapeHtml(t.nom),escapeHtml((t.nom.trim()||__('JOUEUR')).toUpperCase()),selecteurPays(t.pays)]);
   } else if(e===2){
     const s=statsDepart();
-    corps=__t("<h1 class=\"titre-ecran\">Ton poste</h1><div class=\"pile-choix\">{#0}</div>",[Object.keys(POSITIONS).map(p=>`<button class="carte-choix" data-poste="${p}" style="--barre:${p===t.poste?'var(--accent)':'var(--border)'};${p===t.poste?'background:var(--chip);':''}"><p>${__(p)}</p><span class="risque" style="color:var(--text-muted)">${DOMINANTE[p]}</span></button>`).join('')]);
+    corps=__t("<h1 class=\"titre-ecran\">Ton poste</h1><div class=\"pile-choix\">{#0}</div>",[Object.keys(POSITIONS).map(p=>`<button class="carte-choix" data-poste="${p}" style="--barre:${p===t.poste?'var(--accent)':'var(--border)'};${p===t.poste?'background:var(--chip);':''}"><p>${__(p)}</p>${atoutsPosteHtml(p)}</button>`).join('')]);
   } else if(e===3){
     corps=__t("<h1 class=\"titre-ecran\">Ton gabarit</h1><div class=\"pile-choix\">{#0}</div>",[Object.keys(GABARITS).map(g=>{const G=GABARITS[g];const tags=[...Object.entries(G.bonus).map(([k,v])=>`<span style="color:var(--gain)">▲ ${LBL[k]} +${v}</span>`),...Object.entries(G.malus).map(([k,v])=>`<span style="color:var(--perte)">▼ ${LBL[k]} ${v}</span>`)].join(' &nbsp; ');return `<button class="carte-choix" data-gab="${g}" style="--barre:${g===t.gabarit?'var(--accent)':'var(--border)'};${g===t.gabarit?'background:var(--chip);':''};flex-direction:column;align-items:flex-start;gap:6px"><p>${__(g)}</p><span style="font-size:12.5px;color:var(--text-muted)">${G.desc}</span><span style="font-size:12.5px;font-weight:600">${tags}</span></button>`;}).join('')]);
   } else if(e===4){
