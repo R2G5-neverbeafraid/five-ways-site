@@ -2,11 +2,11 @@
 function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
 function rivaux(){ if(!etat.rivaux) etat.rivaux=[]; return etat.rivaux; }
 function possede(type){ return rivaux().some(r=>r.type===type); }
-function franchiseParId(id){ return FRANCHISES.find(f=>f.id===id)||ECOLES.find(f=>f.id===id)||LYCEES.find(f=>f.id===id); }
+function franchiseParId(id){ return FRANCHISES.find(f=>f.id===id)||ECOLES.find(f=>f.id===id)||LYCEES.find(f=>f.id===id)||CLUBS_JEUNES.find(f=>f.id===id); }
 function estFac(){ return !!etat&&etat.niveau==='fac'; }
 function estLycee(){ return estFac()&&!!etat.fac&&!!etat.fac.lycee; }
-function toutesEquipes(){ return estLycee()?LYCEES:estFac()?ECOLES:FRANCHISES; }
-function libSaison(){ return estLycee()?__("Lycée · dernière année"):estFac()?__t("Université · année {#0}",[etat.fac.numero]):__t("Saison {#0}",[etat.saison]); }
+function toutesEquipes(){ return estLycee()?(etat.fac.region==='na'?LYCEES:CLUBS_JEUNES.filter(x=>x.region===etat.fac.region)):estFac()?ECOLES:FRANCHISES; }
+function libSaison(){ return estLycee()?(etat.fac.region==='na'?__("Lycée · dernière année"):etat.fac.etape===2?__("Club · niveau supérieur"):__("Club · saison des jeunes")):estFac()?__t("Université · année {#0}",[etat.fac.numero]):__t("Saison {#0}",[etat.saison]); }
 function rivauxEquipes(franchiseId){
   const res=[];
   for(const r of RIVALITES_EQUIPES){
@@ -107,8 +107,8 @@ function nouvellePartie(nom,poste){
   etat={
     nom,poste,age:17,saison:0,niveau:'pro',fac:null,franchise:null,draftPick:null,
     stats:{...POSITIONS[poste]},
-    meta:{reputation:40,coteEquipe:50,risqueBlessure:0,alchimieEquipe:50},
-    distinctions:{titres:0,allStar:0,mvp:0,medailles:0},
+    meta:{reputation:40,coteEquipe:50,risqueBlessure:0,alchimieEquipe:50,coach:50,vestiaire:50,place:50},
+    distinctions:{titres:0,allStar:0,mvp:0,medailles:0,trophees:0,jo:0,can:0,monde:0}, titresSaisons:[], compteurInterview:0,
     malusAccumule:0, historiqueRecent:[], phase:'lycee', tourActuel:melangerOrdre(LYCEE_POOL),
     coteDraftBase:0
   };
@@ -136,33 +136,41 @@ function choisirChemin(chemin){
 }
 /* ---------- Université : une ou plusieurs saisons jouées avant la Draft ---------- */
 const COTE_PRESTIGE={3:66,2:54,1:44};
-function lyceeParOrigine(id){
-  const p=pick([0,1,2,3,4,5,6,7,8,9]);
-  const niv=id==='prep'?3:id==='academie'?(p<5?3:2):id==='fils'?(p<5?3:2):id==='bitume'?(p<7?1:2):2;
-  return pick(LYCEES.filter(l=>l.prestige===niv));
-}
-function commencerLycee(){
-  etat.niveau='fac'; etat.fac={annees:1,numero:1,derniere:null,titres:0,honneurs:0,lycee:true};
-  etat.franchise=lyceeParOrigine(etat.origine); etat.rivaux=[]; etat.saison=0; etat.ansEquipe=0;
-  etat.meta.coteEquipe=COTE_PRESTIGE[etat.franchise.prestige]||48; etat.meta.alchimieEquipe=50;
-  etat.scenariosRecents=[]; etat.faits=[]; etat.flagScenario=null;
+function jeunesNA(){ return estLycee()&&etat.fac.region==='na'; }
+function commencerJeunes(club,etape,region){
+  etat.niveau='fac'; etat.fac={annees:1,numero:1,derniere:null,titres:0,honneurs:0,lycee:true,region,etape};
+  etat.franchise=club; etat.rivaux=[]; etat.saison=0; etat.ansEquipe=0;
+  etat.meta.coteEquipe=COTE_PRESTIGE[club.prestige]||48; etat.meta.alchimieEquipe=50;
+  etat.scenariosRecents=[]; etat.faits=[]; etat.flagScenario=null; etat.situationsRecentes=[];
   etat.phase='jeu'; genererTour();
 }
-/* Fin de la saison de lycée : les universités appellent selon ta saison, ton profil et ton équipe. */
+function commencerLycee(){
+  const region=regionDe(etat.pays);
+  commencerJeunes(equipeJeunes(etat.origine,region),1,region);
+}
+/* Fin de la saison de jeunes (lycée en Amérique du Nord, club ailleurs) : les offres dépendent de la région, de ta saison, de ton profil et de ton équipe. */
 function terminerLycee(){
   const d=etat.fac.derniere||{reussis:1,total:2}, ratio=d.reussis/Math.max(1,d.total);
+  const reg=etat.fac.region, et=etat.fac.etape||1, courant=etat.franchise;
   etat.coteDraftBase+=clamp(Math.round((ratio-0.5)*6),-2,3)+(etat.fac.titres?1:0);
-  const p=moyenneStats()+(etat.meta.reputation-40)*0.35+(ratio-0.5)*24+(etat.fac.titres?6:0)+(etat.fac.honneurs?5:0)+etat.coteDraftBase*0.8+(etat.franchise.prestige-2)*2;
-  const dejaPris=[], offres=[];
-  for(let i=0;i<3;i++){
-    const sc=p+(Math.random()-0.5)*16;
-    const tier=sc>=66?3:sc>=55?2:1;
-    const cands=ECOLES.filter(x=>x.prestige===tier&&!dejaPris.includes(x.id));
-    const ecole=pick(cands.length?cands:ECOLES.filter(x=>!dejaPris.includes(x.id)));
-    dejaPris.push(ecole.id); offres.push({k:'fac',fid:ecole.id,tier:ecole.prestige});
+  const p=moyenneStats()+(etat.meta.reputation-40)*0.35+(ratio-0.5)*24+(etat.fac.titres?6:0)+(etat.fac.honneurs?5:0)+etat.coteDraftBase*0.8+(courant.prestige-2)*2;
+  const tierDe=(v)=>{ const sc=v+(Math.random()-0.5)*16; return sc>=66?3:sc>=55?2:1; };
+  const dejaPris=[];
+  const offreFac=(v)=>{ const tier=tierDe(v); const c=ECOLES.filter(x=>x.prestige===tier&&!dejaPris.includes(x.id)); const e=pick(c.length?c:ECOLES.filter(x=>!dejaPris.includes(x.id))); dejaPris.push(e.id); return {k:'fac',fid:e.id,tier:e.prestige}; };
+  const offreClub=(region,tier,extra)=>{ const c=CLUBS_JEUNES.filter(x=>x.region===region&&x.prestige===tier&&x.id!==courant.id); const e=pick(c.length?c:CLUBS_JEUNES.filter(x=>x.region===region&&x.id!==courant.id)); return {k:'club',fid:e.id,tier:e.prestige,...(extra||{})}; };
+  let offres=[];
+  if(reg==='na'){
+    offres=[offreFac(p),offreFac(p),offreFac(p)].sort((a,b)=>b.tier-a.tier);
+    offres.push({k:'chemin',i:1},{k:'chemin',i:2});
+  } else if(reg==='af'&&et===1){
+    const tA=tierDe(p-4), tB=Math.max(1,tA-1);
+    offres=[offreClub('af',tA),offreClub('af',tB),{k:'club',fid:courant.id,tier:courant.prestige,stay:true},offreClub('eu',p>=72?3:2,{eu:true}),offreFac(p-8)];
+  } else if(reg==='ot'){
+    offres=[offreFac(p-4),{k:'chemin',i:6},{k:'chemin',i:1},{k:'chemin',i:2},{k:'chemin',i:4}];
+  } else {
+    const gros=p+(Math.random()-0.5)*16>=60;
+    offres=[offreFac(p-4),{k:'chemin',i:gros?5:3},{k:'chemin',i:6},{k:'chemin',i:1},{k:'chemin',i:4}];
   }
-  offres.sort((a,b)=>b.tier-a.tier);
-  offres.push({k:'chemin',i:1},{k:'chemin',i:2});
   etat.age++; etat.offresFac=offres;
   etat.niveau='pro'; etat.fac=null; etat.scenarioActuel=null; etat.rivaux=[]; etat.faits=[]; etat.axeChoisiSaison=null;
   etat.phase='offresfac';
@@ -171,6 +179,7 @@ function choisirOffreFac(i){
   const o=(etat.offresFac||[])[i]; if(!o) return;
   etat.offresFac=null;
   if(o.k==='fac'){ const ecole=franchiseParId(o.fid); commencerFac(1,ecole); }
+  else if(o.k==='club'){ const club=franchiseParId(o.fid); commencerJeunes(club,2,club.region||'af'); }
   else { choisirChemin(CHEMINS_PREDRAFT[o.i]); }
   sauvegarder();
 }
@@ -194,6 +203,15 @@ function choisirCombine(option){
   appliquerEffets(option.effets);
   resoudreDraft();
 }
+/* ---------- Rôle dans l'équipe : le rang de draft décide d'où l'on part ---------- */
+const ROLES=[__("Fin de banc"),__("Sur le banc"),__("Rotation"),__("Titulaire"),__("Star de la franchise")];
+function roleIdx(p){ return p>=80?4:p>=62?3:p>=45?2:p>=30?1:0; }
+function minutesJeu(p){ return clamp(2+p*0.38,3,37); }
+function placeDepart(pick){
+  const base=pick<=3?90:pick<=5?85:pick<=10?78:pick<=14?70:pick<=20?60:pick<=30?50:pick<=40?36:pick<=50?28:20;
+  return clamp(Math.round(base+(Math.random()*8-4)+(moyenneStats()-60)*0.3),8,96);
+}
+function bonusRole(){ return etat.niveau==='pro'&&etat.meta&&typeof etat.meta.place==='number'?clamp((etat.meta.place-50)/900,-0.05,0.05):0; }
 function resoudreDraft(){
   const cote=moyenneStats()+etat.coteDraftBase;
   const roll=Math.random()*60+cote;
@@ -205,6 +223,7 @@ function resoudreDraft(){
   etat.niveau='pro'; etat.fac=null;
   etat.franchise=FRANCHISES[Math.floor(Math.random()*FRANCHISES.length)];
   etat.draftPick=pick;
+  etat.meta.place=placeDepart(pick); etat.meta.coach=50; etat.meta.vestiaire=50; etat.compteurInterview=0;
   etat.contrat=contratRookie(pick); etat.gains=0; etat.marque=null; etat.ansEquipe=0; etat.signatures=0; etat.file=[]; etat.refusExt=false;
   etat.rivaux=rivauxEquipes(etat.franchise.id).map(creerRivalEquipe);
   etat.saison=1;
@@ -230,7 +249,7 @@ function genererTour(){
   const generiques=base.filter(s=>s.generique&&ok(s));
   const dernier=recents[recents.length-1];
   const intros=etat.saison>=2?SCENARIOS.filter(s=>s.intro&&s.cond(etat)):[];
-  const choisi=estFac()?(estLycee()?(base.find(s=>s.id==='lyc_'+etat.origine&&s.cond(etat))||base.find(s=>s.id==='lyc_generique')):etat.fac.numero===1?specifiques.find(s=>s.id==='fac_arrivee'):tirerPondere(specifiques)):(etat.saison===1?specifiques.find(s=>s.id==='rookie'):tirerPondere(specifiques));
+  const choisi=estFac()?(estLycee()?(base.find(s=>(s.id==='jeunes_etape2'||s.id==='lyc_'+etat.origine)&&s.cond(etat))||base.find(s=>s.id==='lyc_generique'&&s.cond(etat))):etat.fac.numero===1?specifiques.find(s=>s.id==='fac_arrivee'):tirerPondere(specifiques)):(etat.saison===1?specifiques.find(s=>s.id==='rookie'):tirerPondere(specifiques));
   const coupes=base.filter(s=>s.coupe&&s.cond(etat));
   const special=etat.flagScenario?SCENARIOS.find(s=>s.id===etat.flagScenario&&s.cond(etat)):null;
   etat.flagScenario=null;
@@ -308,12 +327,29 @@ function coupeIssue(){
   if(ko.bronze===false) return 'quatrieme';
   return 'poule';
 }
+/* Adversaire d'une manche : poule = n'importe qui, puis des adversaires de plus en plus forts (quart, demi, finale), du même continent pour une coupe continentale. */
+function adversaireCoupe(pays,type,stade,rang,deja){
+  let cand=Object.keys(CONTINENTS).filter(p=>p!==pays);
+  if(type==='continent'&&pays) cand=cand.filter(p=>CONTINENTS[p]===CONTINENTS[pays]);
+  cand.sort((a,b)=>(FORCE_NATION[b]||50)-(FORCE_NATION[a]||50));
+  const n=cand.length, fin=stade==='poule'?n:stade==='quart'?Math.ceil(n*0.6):stade==='finale'?Math.max(3,Math.ceil(n*0.2)):Math.max(3,Math.ceil(n*0.35));
+  const tr=cand.slice(0,fin), dep=((etat.saison||0)*7+13+rang*5)%tr.length;
+  for(let k=0;k<tr.length;k++){ const a=tr[(dep+k)%tr.length]; if(!deja.includes(a)) return a; }
+  return tr[dep];
+}
+function bonusCoupe(){
+  const m=etat.matchActuel; if(!m||!m.coupe||!m.adv) return 0;
+  const own=(FORCE_NATION[etat.pays]||50)+(moyenneStats()-60)*0.3;
+  return clamp((own-(FORCE_NATION[m.adv]||50))/250,-0.18,0.12);
+}
 function genererMatchCoupe(stade){
   const sa=etat.scenarioActuel.coupe, pays=nomPays(etat), id={poule:'coupe_poule',quart:'coupe_quart',demi:'coupe_demi',bronze:'coupe_bronze',finale:'coupe_finale'}[stade];
   const s=MATCH_SITUATIONS.find(x=>x.id===id);
   const sub=t=>t.replace(/\{pays\}/g,pays).replace(/\{coupe\}/g,sa.nom);
   const rangC=etat.matchsResultats.filter(m=>m.stade).length;
-  return {id:s.id,titre:s.titre,contexte:sub(s.contexte),choix:melangerOrdre(s.choix.map(c=>({...c,texte:sub(c.texte),ok:sub(c.ok),ko:sub(c.ko)}))),coupe:true,stade,rangC};
+  const deja=sa.adv||(sa.adv=[]);
+  const adv=adversaireCoupe(etat.pays,sa.type,stade,rangC,deja); deja.push(adv);
+  return {id:s.id,titre:s.titre,contexte:sub(s.contexte),choix:melangerOrdre(s.choix.map(c=>({...c,texte:sub(c.texte),ok:sub(c.ok),ko:sub(c.ko)}))),coupe:true,stade,rangC,adv};
 }
 function genererMatch(){ const m=genererMatchBase(); m.tableau=genererTableau(m); return m; }
 function genererMatchBase(){
@@ -335,7 +371,7 @@ function resoudreMatch(opt,geste){
   const bonusGeste=geste&&Number.isFinite(geste.bonus)?clamp(geste.bonus,0,0.15):0;
   const gesteRate=!!(geste&&geste.label==='rate');
   const enPlayoffs=etat.phase==='playoffs';
-  const p=clamp(clamp(etat.stats[opt.stat]/100+opt.mod,0.12,0.9)+bonusGeste+(enPlayoffs?bonusPlayoffs():0),0.05,0.95);
+  const p=clamp(clamp(etat.stats[opt.stat]/100+opt.mod,0.12,0.9)+bonusGeste+(enPlayoffs?bonusPlayoffs():0)+bonusCoupe()+bonusRole(),0.05,0.95);
   const reussi=gesteRate?false:Math.random()<p;
   const rv=etat.matchActuel.rivalId?rivaux().find(r=>r.id===etat.matchActuel.rivalId):null;
   const f=rv?1+0.2*rv.niveau:1;
@@ -361,23 +397,28 @@ function resoudreMatch(opt,geste){
   }
   if(enPlayoffs) return resoudrePlayoffs(entree,reussi);
   etat.matchsResultats.push(entree);
+  let doitInterview=false;
+  if(etat.niveau==='pro'&&!(etat.scenarioActuel&&etat.scenarioActuel.coupe)){ etat.compteurInterview=(etat.compteurInterview||0)+1; if(etat.compteurInterview>=3){ etat.compteurInterview=0; doitInterview=true; } }
   if(etat.scenarioActuel&&etat.scenarioActuel.coupe){
     const nCup=etat.matchsResultats.filter(m=>m.stade).length, duel=rivaux().length?1:0;
     etat.matchsTotal=coupeSuite()?etat.matchsResultats.length+1+duel:nCup+duel;
   }
   if(etat.matchsResultats.length<etat.matchsTotal){
     etat.matchActuel=genererMatch();
+    if(doitInterview) ouvrirInterview('match');
     sauvegarder();
     return entree;
   }
+  if(doitInterview){ ouvrirInterview('fin'); sauvegarder(); return entree; }
   return terminerSaisonRegulier(entree);
 }
 
 /* ---------- Fin de saison régulière, playoffs ---------- */
 const TOURS_PLAYOFFS=[__("Premier tour"),__("Demi-finales de conférence"),__("Finale de conférence"),__('Finales')];
 const TOURS_FAC=[__("Premier tour du Tournoi"),__("Sweet 16"),__("Final Four"),__("Finale nationale")];
+const TOURS_JEUNES=[__("Premier tour"),__("Quarts de finale"),__("Demi-finales nationales"),__("Finale nationale des jeunes")];
 const TOURS_LYC=[__("Premier tour"),__("Quarts de finale"),__("Demi-finales d'État"),__("Finale d'État")];
-function toursPO(){ return estLycee()?TOURS_LYC:estFac()?TOURS_FAC:TOURS_PLAYOFFS; }
+function toursPO(){ return estLycee()?(jeunesNA()?TOURS_LYC:TOURS_JEUNES):estFac()?TOURS_FAC:TOURS_PLAYOFFS; }
 let PO_BASE=[-0.26,-0.30,-0.34,-0.38];
 function bonusPlayoffs(){
   const t=etat.playoffs?etat.playoffs.tour:0;
@@ -390,10 +431,11 @@ function terminerSaisonRegulier(entree){
   const evenements=[];
   const moyenne=moyenneStats();
   const fac=estFac();
-  if(fac){ if(Math.random()<Math.max(0,(moyenne-52)/80+bonus/2)){ etat.fac.honneurs=(etat.fac.honneurs||0)+1; evenements.push(estLycee()?__("Joueur de l'année de l'État !"):__("Meilleur joueur de la conférence !")); } }
+  if(fac){ if(Math.random()<Math.max(0,(moyenne-52)/80+bonus/2)){ etat.fac.honneurs=(etat.fac.honneurs||0)+1; evenements.push(estLycee()?(jeunesNA()?__("Joueur de l'année de l'État !"):__("Meilleur jeune du championnat !")):__("Meilleur joueur de la conférence !")); } }
   else{
-  if(Math.random()<Math.max(0,(moyenne-58)/80+bonus/2)){ etat.distinctions.allStar++; evenements.push(/*fr*/'Sélection All-Star !'); }
-  if(moyenne>68 && Math.random()<Math.max(0,0.01+(moyenne-68)/120+bonus/3)){ etat.distinctions.mvp++; evenements.push(/*fr*/'Élu MVP de la saison !'); }
+  const gate=clamp((etat.meta.place-30)/40,0.12,1);
+  if(Math.random()<Math.max(0,(moyenne-58)/80+bonus/2)*gate){ etat.distinctions.allStar++; evenements.push(/*fr*/'Sélection All-Star !'); }
+  if(moyenne>68 && etat.meta.place>=70 && Math.random()<Math.max(0,0.01+(moyenne-68)/120+bonus/3)){ etat.distinctions.mvp++; evenements.push(/*fr*/'Élu MVP de la saison !'); }
   }
   if(etat.meta.risqueBlessure>60 && Math.random()<0.18){
     etat.malusAccumule+=3;
@@ -404,7 +446,7 @@ function terminerSaisonRegulier(entree){
   if(etat.scenarioActuel&&etat.scenarioActuel.coupe){
     const nomC=etat.scenarioActuel.coupe.nom, avec=aPays(etat)?__(' avec ')+nomPays(etat):'';
     const issue=coupeIssue();
-    if(issue==='or'){ medaille='or'; etat.distinctions.medailles=(etat.distinctions.medailles||0)+2; evenements.push(__t("Médaille d'or — {#0}{#1} !",[nomC,avec])); }
+    if(issue==='or'){ medaille='or'; etat.distinctions.medailles=(etat.distinctions.medailles||0)+2; { const k_={jo:'jo',monde:'monde',continent:'can'}[etat.scenarioActuel.coupe.type]; if(k_) etat.distinctions[k_]=(etat.distinctions[k_]||0)+1; } evenements.push(__t("Médaille d'or — {#0}{#1} !",[nomC,avec])); }
     else if(issue==='argent'){ medaille='argent'; etat.distinctions.medailles=(etat.distinctions.medailles||0)+1; evenements.push(__t("Médaille d'argent — {#0}{#1}",[nomC,avec])); }
     else if(issue==='bronze'){ medaille='bronze'; etat.distinctions.medailles=(etat.distinctions.medailles||0)+1; evenements.push(__t("Médaille de bronze — {#0}{#1}",[nomC,avec])); }
     else if(issue==='quatrieme') evenements.push(__t("Quatrième place — {#0}{#1}",[nomC,avec]));
@@ -415,6 +457,7 @@ function terminerSaisonRegulier(entree){
   const s=genererSaisonRegliere(reussis,etat.matchsResultats.length,moyenne);
   if(fac){ const ng=estLycee()?24:32; s.v=Math.round(s.v*ng/82); s.d=ng-s.v; }
   etat.saisonSport={v:s.v,d:s.d,rang:s.rang,qualifie:s.rang<=8};
+  if(!fac) etat.statsSaison=calculerStatsSaison(evenements.some(x=>x.startsWith('Blessure')),reussis);
   etat.evenementsSaison=evenements;
   etat.medailleSaison=medaille;
   etat.reussisReg=reussis;
@@ -423,6 +466,61 @@ function terminerSaisonRegulier(entree){
   etat.phase='finreguliere';
   sauvegarder();
   return entree;
+}
+/* ---------- Ligne statistique de la saison (points, rebonds, passes, matchs sur 82) ---------- */
+const BONUS_REB={'Pivot':4.5,'Ailier fort':3,'Ailier':0.8,'Arrière':-0.8,'Meneur':-1.6};
+const BONUS_PAS={'Meneur':2.5,'Arrière':0.6,'Ailier':0.3,'Ailier fort':-0.4,'Pivot':-0.6};
+function calculerStatsSaison(blesse,reussis){
+  const s=etat.stats, place=etat.meta.place, ng=82;
+  const mpg=minutesJeu(place)*(0.96+Math.random()*0.08);
+  const u=0.85+place/100*0.3, bruit=()=>0.92+Math.random()*0.16;
+  const p36=clamp(5+(s.scoring-40)*0.42,3,38)*u*bruit();
+  const r36=clamp(3.2+(s.athletisme-40)*0.06+(s.defense-40)*0.05+(BONUS_REB[etat.poste]||0),1.5,16)*bruit();
+  const a36=clamp(1+(s.playmaking-40)*0.16+(BONUS_PAS[etat.poste]||0)+(s.basketIQ-50)*0.02,0.4,13)*bruit();
+  const manques=blesse?Math.round(ng*(0.2+Math.random()*0.35)):Math.round(ng*Math.random()*0.07+etat.meta.risqueBlessure/100*ng*0.08);
+  const r1_=v=>Math.round(v*10)/10;
+  return {gp:Math.max(0,ng-manques),ng,manques,blesse:!!blesse,min:r1_(mpg),pts:r1_(p36*mpg/36),reb:r1_(r36*mpg/36),ast:r1_(a36*mpg/36),placeAvant:place,trophees:[]};
+}
+/* Fin de saison : le rôle évolue selon le niveau, la confiance du coach, le vestiaire et les résultats. */
+function majRole(reussis,total){
+  const m=etat.meta, moy=moyenneStats(), attendu=45+m.place*0.25;
+  const delta=clamp((moy-attendu)*0.9,-8,10)+(m.coach-50)*0.12+(m.vestiaire-50)*0.05+((total?reussis/total:0.5)-0.5)*6+(etat.age<24?1:0);
+  m.place=clamp(Math.round(m.place+delta),5,98);
+  m.coach=Math.round(m.coach+(50-m.coach)*0.15); m.vestiaire=Math.round(m.vestiaire+(50-m.vestiaire)*0.15);
+}
+/* ---------- Interviews ---------- */
+function ouvrirInterview(suite){
+  const recents=etat.interviewsRecents||[];
+  let dispo=INTERVIEWS.filter(x=>x.cond(etat)&&!recents.includes(x.id)); if(!dispo.length) dispo=INTERVIEWS.filter(x=>x.cond(etat));
+  const th=pick(dispo);
+  etat.interviewsRecents=[...recents,th.id].slice(-4);
+  etat.interview={id:th.id,ordre:melangerOrdre([0,1,2,3,4]),suite,resultat:null};
+  etat.phase='interview';
+}
+function interviewTheme(){ return etat.interview?themeInterviewParId(etat.interview.id):null; }
+function repondreInterview(i){
+  const th=interviewTheme(), iv=etat.interview; if(!th||!iv||iv.resultat) return;
+  const ch=th.choix[iv.ordre[i]]; if(!ch) return;
+  const m=etat.meta, avant={coach:m.coach,vestiaire:m.vestiaire,reputation:m.reputation,alchimie:m.alchimieEquipe,place:m.place};
+  const roleAvant=roleIdx(m.place);
+  appliquerEffets(ch.effets);
+  const ag=iv.kind==='agence';
+  if(ag){ iv.chaud=(iv.chaud||0)+(ch.chaud||0); if(ch.pref) iv.pref=ch.pref; }
+  else m.place=clamp(Math.round(m.place+(m.coach-avant.coach)*0.35+(m.vestiaire-avant.vestiaire)*0.15),0,100);
+  iv.resultat={axe:ch.axe,texte:ch.texte,chaud:Math.round((ch.chaud||0)*100),d:{coach:m.coach-avant.coach,vestiaire:m.vestiaire-avant.vestiaire,reputation:m.reputation-avant.reputation,alchimie:m.alchimieEquipe-avant.alchimie},roleAvant,roleApres:roleIdx(m.place)};
+  sauvegarder();
+}
+function finirInterview(){
+  const iv=etat.interview; if(!iv) return;
+  const suite=iv.suite;
+  if(iv&&iv.kind==='agence'){
+    if(iv.etape<2){ iv.etape++; iv.id='fa'+(iv.etape+1); iv.ordre=melangerOrdre([0,1,2,3,4]); iv.resultat=null; sauvegarder(); return; }
+    const p=1.12+clamp(iv.chaud||0,-0.12,0.2);
+    etat.offres=genererOffresAgence(p,iv.pref); etat.interview=null; etat.modeOffres='contrat'; etat.phase='contrat'; sauvegarder(); return;
+  }
+  etat.interview=null;
+  if(suite==='fin'){ etat.phase='match'; terminerSaisonRegulier(null); return; }
+  etat.phase='match'; sauvegarder();
 }
 function avancerFinReguliere(){
   if(etat.playoffs) demarrerPlayoffs(); else finaliserSaison(0);
@@ -445,7 +543,7 @@ function genererMatchPlayoff(tour){
     m={id:s.id,titre:s.titre,contexte:s.contexte,choix:melangerOrdre(s.choix)};
   }
   const enjeu=tour===3?__("Gagne et tu es champion."):__("Gagne et tu passes au tour suivant.");
-  m.contexte=estLycee()?__t("Tournoi d'État — {#0}. Match couperet. {#1} Perds et ta saison de lycée s'arrête. {#2}",[toursPO()[tour],enjeu,m.contexte]):estFac()?__t("Tournoi national — {#0}. Match couperet. {#1} Perds et ta saison universitaire s'arrête. {#2}",[toursPO()[tour],enjeu,m.contexte]):__t("Playoffs — {#0}. Match décisif de la série. {#1} Perds et la saison s'arrête. {#2}",[toursPO()[tour],enjeu,m.contexte]);
+  m.contexte=estLycee()&&!jeunesNA()?__t("Phase finale des jeunes — {#0}. Match couperet. {#1} Perds et ta saison s'arrête. {#2}",[toursPO()[tour],enjeu,m.contexte]):estLycee()?__t("Tournoi d'État — {#0}. Match couperet. {#1} Perds et ta saison de lycée s'arrête. {#2}",[toursPO()[tour],enjeu,m.contexte]):estFac()?__t("Tournoi national — {#0}. Match couperet. {#1} Perds et ta saison universitaire s'arrête. {#2}",[toursPO()[tour],enjeu,m.contexte]):__t("Playoffs — {#0}. Match décisif de la série. {#1} Perds et la saison s'arrête. {#2}",[toursPO()[tour],enjeu,m.contexte]);
   m.titre=`${toursPO()[tour]} · ${m.titre}`;
   m.playoff=true; m.tour=tour;
   m.tableau=genererTableau(m);
@@ -466,8 +564,17 @@ function finaliserSaison(stade){
   const evenements=[...(etat.evenementsSaison||[])];
   const po=(etat.playoffs&&etat.playoffs.resultats)||[];
   const fac=estFac();
-  if(stade===5){ if(fac){ etat.fac.titres++; evenements.unshift(estLycee()?__("Titre d'État remporté !"):__("Titre universitaire remporté !")); } else { etat.distinctions.titres++; evenements.unshift(__("Titre remporté !")); } }
-  else if(stade===4) evenements.unshift(estLycee()?__("Finaliste d'État — battu en finale"):fac?__("Finaliste national — battu en finale"):__("Finaliste — battu en finale"));
+  if(stade===5){ if(fac){ etat.fac.titres++; evenements.unshift(estLycee()?(jeunesNA()?__("Titre d'État remporté !"):__("Titre national des jeunes remporté !")):__("Titre universitaire remporté !")); } else { etat.distinctions.titres++; (etat.titresSaisons=etat.titresSaisons||[]).push(etat.saison); evenements.unshift(__("Titre remporté !")); } }
+  else if(stade===4) evenements.unshift(estLycee()?(jeunesNA()?__("Finaliste d'État — battu en finale"):__("Finaliste national des jeunes — battu en finale")):fac?__("Finaliste national — battu en finale"):__("Finaliste — battu en finale"));
+  const st_=etat.statsSaison;
+  if(!fac&&st_){
+    const moy=moyenneStats(), pl=etat.meta.place, T=st_.trophees, add=(txt)=>{ T.push(txt); evenements.push(txt); etat.distinctions.trophees=(etat.distinctions.trophees||0)+1; };
+    if(etat.saison===1&&pl>=40&&st_.pts>=9&&Math.random()<clamp((moy-52)/45,0,0.6)) add(__("Rookie de l'année"));
+    if(etat.stats.defense>=76&&pl>=55&&Math.random()<clamp((etat.stats.defense-70)/55,0,0.45)) add(__("Défenseur de l'année"));
+    if(roleIdx(pl)<=2&&pl>=38&&moy>=64&&Math.random()<0.25) add(__("Meilleur sixième homme"));
+    if(st_.pts>=26&&Math.random()<clamp((st_.pts-24)/8,0,0.7)) add(__("Meilleur marqueur de la ligue"));
+    if(stade===5&&pl>=62&&Math.random()<0.4) add(__("MVP des Finales"));
+  }
   const ss=etat.saisonSport||{v:41,d:41,rang:8};
   const saisonSportive={v:ss.v,d:ss.d,rang:ss.rang,stade,fac};
   const tous=[...etat.matchsResultats,...po];
@@ -488,7 +595,8 @@ function finaliserSaison(stade){
   etat.dernierResultat={
     gainsSaison:{salaire:gSal,marque:gMar},
     texteChoix:etat.texteChoixSaison, axe:etat.axeChoisiSaison, deltas, evenements,
-    matchs:tous, saison:saisonSportive
+    matchs:tous, saison:saisonSportive,
+    stats:(!fac&&etat.statsSaison)?{...etat.statsSaison,allStar:evenements.some(x=>x.startsWith('Sélection')),mvp:evenements.some(x=>x.startsWith('Élu MVP')),titre:stade===5,medaille:etat.medailleSaison||null,place:etat.meta.place,roleAvant:roleIdx(etat.statsSaison.placeAvant)}:null
   };
   if(fac) etat.fac.derniere={reussis,total:tous.length};
   if(typeof suivre==='function'&&!fac){
@@ -498,13 +606,16 @@ function finaliserSaison(stade){
     if(etat.bilan.mvp) suivre('mvp');
     if(etat.medailleSaison) suivre('medaille',1,etat.medailleSaison);
   }
+  if(!fac&&etat.statsSaison) majRole(reussis,tous.length);
+  if(etat.dernierResultat.stats) etat.dernierResultat.stats.roleApres=roleIdx(etat.meta.place);
+  etat.statsSaison=null;
   etat.matchActuel=null; etat.playoffs=null; etat.saisonSport=null; etat.evenementsSaison=null;
   etat.phase='resultat';
   sauvegarder();
 }
 const HOF_KEY='five-ways-hof-v1';
 function rareteScore(t){
-  return t>=76?[__('LÉGENDAIRE'),'#F5C542',__("Top 10 %")]:t>=62?[__('ÉPIQUE'),'#D4F04D',__("Top 30 %")]:t>=46?[__('RARE'),'#4C6FFF',__("Top 65 %")]:[__('COMMUN'),'#9AA7BD',__("Parcours classique")];
+  return t>=110?[__('LÉGENDAIRE'),'#F5C542',__("Top 10 %")]:t>=80?[__('ÉPIQUE'),'#D4F04D',__("Top 30 %")]:t>=55?[__('RARE'),'#4C6FFF',__("Top 65 %")]:[__('COMMUN'),'#9AA7BD',__("Parcours classique")];
 }
 function lireHof(){ try{ const v=JSON.parse(localStorage.getItem(HOF_KEY)||'[]'); return Array.isArray(v)?v:[]; }catch(err){ return []; } }
 function enregistrerCarriere(){
@@ -529,13 +640,19 @@ function continuerApresResultat(){
   else{ preparerInterSaison(); suiteHorsSaison(); }
   sauvegarder();
 }
+/* Barème : titre +15 (deux de suite +20, trois de suite et plus +30), JO +10, CAN / Coupe du monde +5, MVP +8, autres trophées individuels +3, All-Star +2. */
+function pointsTitres(){
+  const d=etat.distinctions, ss=[...new Set((etat.titresSaisons||[]).map(Number))].sort((a,b)=>a-b);
+  let tot=0, run=0, prev=-9;
+  for(const x of ss){ run=(x===prev+1)?run+1:1; tot+=run>=3?30:run===2?20:15; prev=x; }
+  return tot+15*Math.max(0,(d.titres||0)-ss.length);
+}
 function calculerScore(){
   const d=etat.distinctions;
-  const barTitres=[12,9,6,3];
-  let titres=0;
-  for(let i=0;i<d.titres;i++) titres+=barTitres[Math.min(i,3)];
-  titres=Math.min(30,titres);
-  const distinctions=Math.min(25, d.allStar*2 + d.mvp*8 + Math.min(8,d.medailles||0));
+  const titres=pointsTitres();
+  const ors=(d.jo||0)+(d.can||0)+(d.monde||0);
+  const autresMedailles=Math.max(0,(d.medailles||0)-2*ors);
+  const distinctions=d.allStar*2 + d.mvp*8 + (d.trophees||0)*3 + (d.jo||0)*10 + ((d.can||0)+(d.monde||0))*5 + Math.min(4,autresMedailles);
   const stats=Math.max(0, Math.min(25, Math.round((moyenneStats()-40)/60*25)));
   const seasons=etat.saison-1;
   let longevite=Math.min(12,seasons);
@@ -551,6 +668,7 @@ function sauvegardeValide(s){
   if(s.phase==='finreguliere') return !!s.saisonSport&&typeof s.saisonSport==='object'&&!!s.franchise;
   if(s.phase==='playoffs') return !!s.matchActuel&&Array.isArray(s.matchActuel.choix)&&!!s.playoffs&&typeof s.playoffs==='object'&&!!s.saisonSport&&!!s.franchise;
   if(s.phase==='resultat') return !!s.dernierResultat&&!!s.franchise;
+  if(s.phase==='interview') return !!s.franchise&&!!s.interview&&typeof s.interview==='object'&&!!themeInterviewParId(s.interview.id)&&(s.interview.suite!=='match'||(!!s.matchActuel&&Array.isArray(s.matchActuel.choix)&&Array.isArray(s.matchsResultats)));
   if(s.phase==='retraite') return !!s.franchise;
   if(s.phase==='lycee') return Array.isArray(s.tourActuel);
   if(s.phase==='chemin'||s.phase==='combine') return true;
@@ -563,7 +681,7 @@ function sauvegardeValide(s){
 // On la reconstruit donc avec des valeurs contrôlées avant de l'utiliser.
 function assainir(s){
   const num=(v,mn,mx,d)=>{ v=Number(v); return Number.isFinite(v)?Math.max(mn,Math.min(mx,Math.round(v))):d; };
-  const f=FRANCHISES.find(x=>s.franchise&&x.id===s.franchise.id)||ECOLES.find(x=>s.franchise&&x.id===s.franchise.id)||LYCEES.find(x=>s.franchise&&x.id===s.franchise.id);
+  const f=FRANCHISES.find(x=>s.franchise&&x.id===s.franchise.id)||ECOLES.find(x=>s.franchise&&x.id===s.franchise.id)||LYCEES.find(x=>s.franchise&&x.id===s.franchise.id)||CLUBS_JEUNES.find(x=>s.franchise&&x.id===s.franchise.id);
   if(s.franchise&&!f&&s.phase!=='offresfac') return false;
   if(f) s.franchise=f;
   s.nom=String(s.nom||__('JOUEUR')).replace(/[<>&"'`]/g,'').slice(0,24)||__('JOUEUR');
@@ -575,10 +693,14 @@ function assainir(s){
   if(s.defi&&typeof s.defi==='object'&&carriereParId(s.defi.id)) s.defi={id:s.defi.id}; else s.defi=null;
   s.age=num(s.age,14,60,17); s.saison=num(s.saison,0,60,1);
   for(const k of Object.keys(POSITIONS.Ailier)) s.stats[k]=num(s.stats[k],0,99,50);
-  for(const k of ['reputation','coteEquipe','risqueBlessure','alchimieEquipe']) s.meta[k]=num(s.meta[k],0,100,50);
-  for(const k of ['titres','allStar','mvp','medailles']) s.distinctions[k]=num(s.distinctions[k],0,99,0);
+  for(const k of ['reputation','coteEquipe','risqueBlessure','alchimieEquipe','coach','vestiaire','place']) s.meta[k]=num(s.meta[k],0,100,50);
+  s.compteurInterview=num(s.compteurInterview,0,2,0); s.interviewsRecents=(Array.isArray(s.interviewsRecents)?s.interviewsRecents:[]).filter(x=>INTERVIEWS.some(t=>t.id===x)).slice(-4);
+  if(s.interview&&typeof s.interview==='object'&&themeInterviewParId(s.interview.id)){ const o=Array.isArray(s.interview.ordre)?s.interview.ordre.map(Number):[]; const ok=o.length===5&&[0,1,2,3,4].every(k=>o.includes(k)); const r=s.interview.resultat; const d=r&&r.d||{}; const th_=themeInterviewParId(s.interview.id); const ag_=s.interview.kind==='agence'&&s.interview.id.startsWith('fa'); s.interview={id:s.interview.id,kind:ag_?'agence':null,etape:num(s.interview.etape,0,2,0),chaud:Math.max(-0.5,Math.min(0.8,Math.round((Number(s.interview.chaud)||0)*100)/100)),pref:['contender','argent','marche','maison','star'].includes(s.interview.pref)?s.interview.pref:null,ordre:ok?o:[0,1,2,3,4],suite:ag_?'agence':s.interview.suite==='fin'?'fin':'match',resultat:r&&typeof r==='object'&&th_.choix.some(c=>c.texte===r.texte)?{axe:th_.choix.find(c=>c.texte===r.texte).axe,texte:r.texte,chaud:num(r.chaud,-30,30,0),d:{coach:num(d.coach,-30,30,0),vestiaire:num(d.vestiaire,-30,30,0),reputation:num(d.reputation,-30,30,0),alchimie:num(d.alchimie,-30,30,0)},roleAvant:num(r.roleAvant,0,4,0),roleApres:num(r.roleApres,0,4,0)}:null}; } else s.interview=null;
+  { const q=s.statsSaison; if(q&&typeof q==='object'){ const f1=(v,mn,mx)=>{ v=Number(v); return Number.isFinite(v)?Math.max(mn,Math.min(mx,Math.round(v*10)/10)):0; }; s.statsSaison={gp:num(q.gp,0,82,82),ng:82,manques:num(q.manques,0,82,0),blesse:!!q.blesse,min:f1(q.min,0,48),pts:f1(q.pts,0,60),reb:f1(q.reb,0,30),ast:f1(q.ast,0,25),placeAvant:num(q.placeAvant,0,100,50),trophees:[]}; } else s.statsSaison=null; }
+  for(const k of ['titres','allStar','mvp','medailles','trophees','jo','can','monde']) s.distinctions[k]=num(s.distinctions[k],0,99,0);
+  s.titresSaisons=(Array.isArray(s.titresSaisons)?s.titresSaisons:[]).map(Number).filter(x=>Number.isFinite(x)&&x>=0&&x<=80).slice(0,60);
   s.niveau=s.niveau==='fac'?'fac':'pro';
-  if(s.niveau==='fac'&&s.fac&&typeof s.fac==='object'){ const q=s.fac; s.fac={annees:q.lycee?1:4,lycee:!!q.lycee,numero:num(q.numero,1,q.lycee?1:4,1),titres:num(q.titres,0,9,0),honneurs:num(q.honneurs,0,9,0),derniere:q.derniere&&typeof q.derniere==='object'?{reussis:num(q.derniere.reussis,0,20,0),total:num(q.derniere.total,1,20,1)}:null}; if(s.fac.numero>s.fac.annees) s.fac.numero=s.fac.annees; } else { s.fac=null; if(s.niveau==='fac') s.niveau='pro'; }
+  if(s.niveau==='fac'&&s.fac&&typeof s.fac==='object'){ const q=s.fac; s.fac={annees:q.lycee?1:4,lycee:!!q.lycee,region:['na','af','eu','ot'].includes(q.region)?q.region:'na',etape:q.etape===2?2:1,numero:num(q.numero,1,q.lycee?1:4,1),titres:num(q.titres,0,9,0),honneurs:num(q.honneurs,0,9,0),derniere:q.derniere&&typeof q.derniere==='object'?{reussis:num(q.derniere.reussis,0,20,0),total:num(q.derniere.total,1,20,1)}:null}; if(s.fac.numero>s.fac.annees) s.fac.numero=s.fac.annees; } else { s.fac=null; if(s.niveau==='fac') s.niveau='pro'; }
   if(s.ecole!==undefined) s.ecole=String(s.ecole).replace(/[<>&"'`]/g,'').slice(0,50);
   s.malusAccumule=num(s.malusAccumule,0,999,0);
   const nf=(v,mn,mx,d)=>{ v=Number(v); return Number.isFinite(v)?Math.max(mn,Math.min(mx,Math.round(v*10)/10)):d; };
@@ -592,13 +714,15 @@ function assainir(s){
   s.refusExt=!!s.refusExt; s.optionRefusee=!!s.optionRefusee; s.optionJoueurExercee=!!s.optionJoueurExercee;
   if(s.flagScenario&&!['trade_surprise','trade_veto','trade_demande'].includes(s.flagScenario)) s.flagScenario=null;
   if(s.tradeVers&&!FRANCHISES.some(f=>f.id===s.tradeVers)) s.tradeVers=null;
-  if(Array.isArray(s.offresFac)) s.offresFac=s.offresFac.slice(0,6).filter(o=>o&&(o.k==='fac'&&ECOLES.some(x=>x.id===o.fid)||o.k==='chemin'&&CHEMINS_PREDRAFT[o.i])).map(o=>o.k==='fac'?{k:'fac',fid:o.fid,tier:num(o.tier,1,3,1)}:{k:'chemin',i:num(o.i,0,CHEMINS_PREDRAFT.length-1,1)}); else s.offresFac=null;
+  if(Array.isArray(s.offresFac)) s.offresFac=s.offresFac.slice(0,6).filter(o=>o&&(o.k==='fac'&&ECOLES.some(x=>x.id===o.fid)||o.k==='club'&&CLUBS_JEUNES.some(x=>x.id===o.fid)||o.k==='chemin'&&CHEMINS_PREDRAFT[o.i])).map(o=>o.k==='fac'?{k:'fac',fid:o.fid,tier:num(o.tier,1,3,1)}:o.k==='club'?{k:'club',fid:o.fid,tier:num(o.tier,1,3,1),eu:!!o.eu,stay:!!o.stay}:{k:'chemin',i:num(o.i,0,CHEMINS_PREDRAFT.length-1,1)}); else s.offresFac=null;
   if(Array.isArray(s.offres)) s.offres=s.offres.slice(0,6).filter(o=>o&&typeof o==='object'&&FRANCHISES.some(f=>f.id===o.fid)||(o&&marqueParId(o.mid)||o&&o.k==='libre')).map(o=>({k:String(o.k||'').slice(0,20),fid:FRANCHISES.some(f=>f.id===o.fid)?o.fid:s.franchise.id,mid:marqueParId(o.mid)?o.mid:'',tag:['contender','marche','reconstruction','maison','refus'].includes(o.tag)?o.tag:'maison',annees:num(o.annees,0,6,0),salaire:nf(o.salaire,0,999,0),valeur:nf(o.valeur,0,999,0),ntc:!!o.ntc,optJ:!!o.optJ})); else s.offres=null;
   if(s.ancienneFranchise&&typeof s.ancienneFranchise==='object') s.ancienneFranchise={ville:String(s.ancienneFranchise.ville||'').slice(0,30),nom:String(s.ancienneFranchise.nom||'').slice(0,30)}; else s.ancienneFranchise=null;
   if(Array.isArray(s.rivaux)) s.rivaux=s.rivaux.slice(0,12).filter(r=>r&&typeof r==='object').map(r=>({id:String(r.id||'').slice(0,20),type:String(r.type||'').slice(0,10),nom:String(r.nom||'').slice(0,40),court:String(r.court||'').slice(0,30),prenom:String(r.prenom||'').slice(0,20),poste:String(r.poste||'').slice(0,20),equipe:String(r.equipe||'').slice(0,40),detail:String(r.detail||'').slice(0,60),raison:['scoring','defense','playmaking','athletisme','basketIQ','elimine'].includes(r.raison)?r.raison:'',niveau:num(r.niveau,1,5,1),bilan:{v:num(r.bilan&&r.bilan.v,0,999,0),d:num(r.bilan&&r.bilan.d,0,999,0)}}));
   else s.rivaux=[];
   if(s.saisonSport&&typeof s.saisonSport==='object'){ const q=s.saisonSport; s.saisonSport={v:num(q.v,0,82,41),d:num(q.d,0,82,41),rang:num(q.rang,1,15,8),qualifie:num(q.rang,1,15,8)<=8}; } else s.saisonSport=null;
   if(s.playoffs&&typeof s.playoffs==='object'){ s.playoffs={tour:num(s.playoffs.tour,0,3,0),resultats:(Array.isArray(s.playoffs.resultats)?s.playoffs.resultats:[]).slice(0,4).filter(r=>r&&typeof r==='object')}; } else s.playoffs=null;
+  if(s.matchActuel&&s.matchActuel.adv&&!CONTINENTS[s.matchActuel.adv]) delete s.matchActuel.adv;
+  if(s.scenarioActuel&&s.scenarioActuel.coupe&&s.scenarioActuel.coupe.adv) s.scenarioActuel.coupe.adv=(Array.isArray(s.scenarioActuel.coupe.adv)?s.scenarioActuel.coupe.adv:[]).filter(a=>CONTINENTS[a]).slice(0,8);
   if(s.matchActuel&&s.matchActuel.stade&&!['poule','quart','demi','bronze','finale'].includes(s.matchActuel.stade)) delete s.matchActuel.stade;
   if(s.matchActuel&&s.matchActuel.rangC!==undefined) s.matchActuel.rangC=num(s.matchActuel.rangC,0,8,0);
   if(s.matchActuel){ s.matchActuel.playoff=!!s.matchActuel.playoff; s.matchActuel.tour=num(s.matchActuel.tour,0,3,0); }

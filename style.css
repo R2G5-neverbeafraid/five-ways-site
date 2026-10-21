@@ -150,6 +150,10 @@
   .actu{ display:flex; gap:10px; align-items:baseline; font-size:13.5px; line-height:1.4; }
   .actu .src{ font-family:'JetBrains Mono',ui-monospace,monospace; font-size:10px; letter-spacing:.08em; color:var(--accent); background:color-mix(in srgb,var(--accent) 15%,transparent); padding:2px 7px; border-radius:6px; flex:none; }
   /* ---- Bilan de saison ---- */
+  .stats-ligne{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .stats-ligne div{ background:var(--chip); border:1px solid var(--border); border-radius:10px; padding:8px 4px; text-align:center; }
+  .stats-ligne b{ display:block; font-family:Anton,Oswald,Impact,sans-serif; font-size:22px; line-height:1.15; }
+  .stats-ligne span{ font-size:10.5px; font-weight:600; letter-spacing:.1em; color:var(--text-muted); }
   .bilan-saison{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 15px; display:flex; flex-direction:column; gap:10px; }
   .vd{ display:flex; justify-content:space-between; align-items:baseline; }
   .vd .chiffre{ font-size:40px; line-height:1; }
@@ -227,3 +231,5 @@
 .swipe-points{ display:flex; gap:8px; justify-content:center; margin-top:10px; }
 .swipe-points i{ width:8px; height:8px; border-radius:50%; background:var(--border); cursor:pointer; }
 .swipe-points i.on{ background:var(--accent); }
+
+  .score-max{ display:none; }

@@ -119,7 +119,9 @@ const CHEMINS_PREDRAFT=[
   {texte:__("G-League Ignite (voie professionnelle directe)"),ageAjout:1,coteDraftMod:0,effets:{scoring:2,athletisme:1}},
   {texte:__("Jouer un an en Europe"),ageAjout:1,coteDraftMod:1,effets:{basketIQ:2,defense:1}},
   {texte:__("Passer une année entière à t'entraîner avant la Draft"),ageAjout:1,coteDraftMod:1,effets:{athletisme:3,basketIQ:1,risqueBlessure:-4}},
-  {texte:__("Te déclarer directement pour la Draft (profil international)"),ageAjout:1,coteDraftMod:-3,effets:{}}
+  {texte:__("Te déclarer directement pour la Draft (profil international)"),ageAjout:1,coteDraftMod:-3,effets:{}},
+  {texte:__("Signer dans un club européen de haut niveau (Euroleague)"),ageAjout:1,coteDraftMod:2,effets:{basketIQ:2,defense:1}},
+  {texte:__("Intégrer l'équipe première d'un club de ta ligue nationale"),ageAjout:1,coteDraftMod:1,effets:{scoring:1,basketIQ:1}}
 ];
 
 /* NCAA Division I : universités réelles (noms et couleurs d'origine). Les mascottes sont remplacées par un clin d'œil qui y renvoie. [nom, mascotte, couleur, couleur2, abréviation, prestige] */
@@ -500,6 +502,18 @@ const ORIGINES=[
   {id:'bitume',nom:__("Légende du bitume de ton quartier"),desc:__("Tout appris dans la rue : un style inimitable et tout un quartier derrière toi."),stats:{scoring:3,athletisme:2,basketIQ:-1},meta:{reputation:6,alchimieEquipe:-2},cote:0,pression:0},
   {id:'fils',nom:__("Fils d'un ancien joueur"),desc:__("Un nom qui ouvre des portes, et une pression qui ne te quitte jamais."),stats:{basketIQ:2,scoring:1},meta:{reputation:10,coteEquipe:3},cote:2,pression:1}
 ];
+ORIGINES.push(
+  {id:'hs',nom:__("Lycée public et circuit AAU"),desc:__("Le lycée en semaine, les tournois d'été le week-end : tu te fais remarquer match après match."),stats:{scoring:1,athletisme:1,defense:1},meta:{reputation:4},cote:1,pression:0},
+  {id:'club',nom:__("Club de ton quartier"),desc:__("Peu de moyens, un terrain usé et un entraîneur qui croit en toi : tout reste à prouver."),stats:{athletisme:2,defense:1,basketIQ:-1},meta:{reputation:2,alchimieEquipe:2},cote:0,pression:0},
+  {id:'academie_af',nom:__("Académie de basket du continent"),desc:__("Une académie qui forme les meilleurs jeunes d'Afrique, avec des recruteurs d'Europe et des États-Unis dans les gradins."),stats:{basketIQ:2,defense:1,athletisme:1},meta:{reputation:5},cote:2,pression:0},
+  {id:'sport_etudes',nom:__("Section sport-études"),desc:__("Cours le matin, basket l'après-midi, et un club régional qui te suit de près."),stats:{basketIQ:2,defense:1},meta:{reputation:3},cote:1,pression:0}
+);
+const ORIGINES_REGION={na:['prep','hs','bitume','fils'],af:['club','academie_af','bitume','fils'],eu:['academie','sport_etudes','bitume','fils'],ot:['club','academie','bitume','fils']};
+const PRESTIGE_ORIGINE={prep:3,hs:2,club:1,academie_af:2,academie:3,sport_etudes:2,bitume:1,fils:2};
+/* Force réelle des sélections nationales (0-100, d'après les classements FIBA et les résultats récents). Le jeu reste arcade, mais les gros pays restent les favoris. */
+const FORCE_NATION={'USA':98,'Allemagne':91,'France':90,'Canada':90,'Serbie':90,'Espagne':88,'Australie':87,'Slovénie':84,'Grèce':83,'Lituanie':82,'Italie':80,'Turquie':78,'Lettonie':78,'Brésil':78,'Argentine':76,'Soudan du Sud':76,'Finlande':74,'Monténégro':74,'Nigeria':74,'Japon':72,'Cameroun':72,'République dominicaine':72,'Porto Rico':70,'Géorgie':70,'Sénégal':70,'Chine':70,'Croatie':68,'Nouvelle-Zélande':68,'Angola':68,'Ukraine':68,'Royaume-Uni':66,'Iran':66,'Égypte':66,'Mali':66,'Tunisie':66,'Philippines':66,'Venezuela':66,'Pologne':66,'Corée du Sud':64,'Mexique':64,'Cap-Vert':62,"Côte d'Ivoire":62,'Liban':62,'Maroc':60,'RDC':58,'Jordanie':58,'Rwanda':52,'Autre':50};
+function regionDe(pays){ if(pays==='USA'||pays==='Canada') return 'na'; const c=CONTINENTS[pays]; return c==='Afrique'?'af':c==='Europe'?'eu':'ot'; }
+function originesPourPays(p){ return ORIGINES_REGION[regionDe(p)].map(origineParId); }
 function origineParId(id){ return ORIGINES.find(x=>x.id===id)||null; }
 const o=(texte,stat,mod,enjeu,gain,perte,ok,ko)=>({texte,stat,mod,enjeu,gain,perte,ok,ko});
 const MATCH_SITUATIONS=[
@@ -1389,9 +1403,9 @@ const LYCEES=[
 ].map((r,i)=>({id:'l'+i,ville:r[0],nom:r[1],couleur:r[2],couleur2:r[3],abr:r[4],prestige:r[5]}));
 const TIERS_FAC={3:'High major',2:'Mid major',1:'Low major'};
 SCENARIOS.push(
-  {id:'lyc_prep',fac:true,generique:false,cond:e=>e.niveau==='fac'&&!!e.fac.lycee&&e.origine==='prep',
+  {id:'lyc_prep',fac:true,generique:false,cond:e=>e.niveau==='fac'&&!!e.fac.lycee&&(e.fac.etape||1)===1&&e.origine==='prep',
    question:__("Dernière année de prep school : quel est ton rôle ?"),
-   contexte:e=>__t("Tu joues pour les {#0} {#1}, l'un des meilleurs lycées du pays. Les recruteurs des grandes universités remplissent déjà les gradins, mais tu partages le ballon avec d'autres futures stars.",[e.franchise.ville,e.franchise.nom]),
+   contexte:e=>__t("Tu joues pour {#0} {#1}, l'un des meilleurs lycées du pays. Les recruteurs des grandes universités remplissent déjà les gradins, mais tu partages le ballon avec d'autres futures stars.",[e.franchise.ville,e.franchise.nom]),
    choix:[
     c('Performance',__("Travailler ton jeu avec le staff d'élite chaque matin"),{scoring:2,basketIQ:1}),
     c('Carrière / Contrat',__("Demander le rôle de première option offensive"),{coteEquipe:2,reputation:1}),
@@ -1399,9 +1413,9 @@ SCENARIOS.push(
     c('Vie perso',__("Garder du temps pour tes proches malgré le rythme"),{alchimieEquipe:3,risqueBlessure:-3}),
     c('Risque / Legacy',__("Annoncer vouloir être le meilleur lycéen du pays"),{reputation:5,risqueBlessure:2})
   ]},
-  {id:'lyc_academie',fac:true,generique:false,cond:e=>e.niveau==='fac'&&!!e.fac.lycee&&e.origine==='academie',
+  {id:'lyc_academie',fac:true,generique:false,cond:e=>e.niveau==='fac'&&!!e.fac.lycee&&(e.fac.etape||1)===1&&e.origine==='academie',
    question:__("Dernière année au centre de formation : comment la vis-tu ?"),
-   contexte:e=>__t("Tu défends les couleurs des {#0} {#1}. La discipline est stricte, tes progrès sont suivis de près et les recruteurs observent chaque séance.",[e.franchise.ville,e.franchise.nom]),
+   contexte:e=>__t("Tu défends les couleurs de {#0} {#1}. La discipline est stricte, tes progrès sont suivis de près et les recruteurs observent chaque séance.",[e.franchise.ville,e.franchise.nom]),
    choix:[
     c('Performance',__("Respecter à la lettre ton programme individuel"),{athletisme:2,basketIQ:1}),
     c('Carrière / Contrat',__("Demander aux coachs de présenter ton profil aux universités"),{reputation:2,coteEquipe:1}),
@@ -1409,9 +1423,9 @@ SCENARIOS.push(
     c('Vie perso',__("Rentrer voir ta famille chaque fin de mois"),{alchimieEquipe:3,risqueBlessure:-2}),
     c('Risque / Legacy',__("Tenter des gestes techniques que le coach déconseille"),{scoring:2,reputation:2,risqueBlessure:3})
   ]},
-  {id:'lyc_bitume',fac:true,generique:false,cond:e=>e.niveau==='fac'&&!!e.fac.lycee&&e.origine==='bitume',
-   question:__("Du bitume au lycée : comment portes-tu ton équipe ?"),
-   contexte:e=>__t("Tu es la star des {#0} {#1}, une petite équipe sans grands moyens. Tout le quartier vient te voir jouer, mais peu de recruteurs ont fait le déplacement.",[e.franchise.ville,e.franchise.nom]),
+  {id:'lyc_bitume',fac:true,generique:false,cond:e=>e.niveau==='fac'&&!!e.fac.lycee&&(e.fac.etape||1)===1&&e.origine==='bitume',
+   question:__("Du bitume à l'équipe de jeunes : comment portes-tu ton équipe ?"),
+   contexte:e=>__t("Tu es la star de {#0} {#1}, une petite équipe sans grands moyens. Tout le quartier vient te voir jouer, mais peu de recruteurs ont fait le déplacement.",[e.franchise.ville,e.franchise.nom]),
    choix:[
     c('Performance',__("Porter l'équipe à toi seul chaque soir"),{scoring:2,risqueBlessure:2}),
     c('Carrière / Contrat',__("Envoyer toi-même tes vidéos aux universités"),{reputation:2,coteEquipe:1}),
@@ -1419,9 +1433,9 @@ SCENARIOS.push(
     c('Vie perso',__("Organiser des matchs pour les jeunes du quartier"),{alchimieEquipe:3,reputation:1}),
     c('Risque / Legacy',__("Défier publiquement la meilleure équipe de l'État"),{reputation:5,risqueBlessure:2})
   ]},
-  {id:'lyc_fils',fac:true,generique:false,cond:e=>e.niveau==='fac'&&!!e.fac.lycee&&e.origine==='fils',
+  {id:'lyc_fils',fac:true,generique:false,cond:e=>e.niveau==='fac'&&!!e.fac.lycee&&(e.fac.etape||1)===1&&e.origine==='fils',
    question:__("Dernière année sous le nom de ton père : comment l'assumes-tu ?"),
-   contexte:e=>__t("Chez les {#0} {#1}, tout le monde connaît ton nom de famille. Les recruteurs sont venus voir le fils de l'ancien joueur, et tu dois prouver que tu es bien plus que cela.",[e.franchise.ville,e.franchise.nom]),
+   contexte:e=>__t("Chez {#0} {#1}, tout le monde connaît ton nom de famille. Les recruteurs sont venus voir le fils de l'ancien joueur, et tu dois prouver que tu es bien plus que cela.",[e.franchise.ville,e.franchise.nom]),
    choix:[
     c('Performance',__("Travailler tes fondamentaux avec ton père"),{basketIQ:2,defense:1}),
     c('Carrière / Contrat',__("Laisser ton père discuter avec les universités"),{coteEquipe:2,reputation:1}),
@@ -1429,9 +1443,9 @@ SCENARIOS.push(
     c('Vie perso',__("Passer du temps loin du basket avec ta famille"),{alchimieEquipe:2,risqueBlessure:-3}),
     c('Risque / Legacy',__("Promettre de faire mieux que lui"),{reputation:5,risqueBlessure:2})
   ]},
-  {id:'lyc_generique',fac:true,generique:true,cond:e=>e.niveau==='fac'&&!!e.fac.lycee,
+  {id:'lyc_generique',fac:true,generique:true,cond:e=>e.niveau==='fac'&&!!e.fac.lycee&&(e.fac.etape||1)===1,
    question:__("Dernière année de lycée : où mets-tu l'accent ?"),
-   contexte:e=>__t("Les recruteurs commencent à passer dans les gradins des {#0} {#1}. Cette saison peut décider du niveau des universités qui t'appelleront.",[e.franchise.ville,e.franchise.nom]),
+   contexte:e=>__t("Les recruteurs commencent à passer dans les gradins de {#0} {#1}. Cette saison peut décider du niveau des universités qui t'appelleront.",[e.franchise.ville,e.franchise.nom]),
    choix:[
     c('Performance',__("Ajouter une séance de tir individuelle chaque matin"),{scoring:2,risqueBlessure:1}),
     c('Carrière / Contrat',__("Visiter les campus qui offrent le plus de temps de jeu"),{coteEquipe:2}),
@@ -1444,3 +1458,183 @@ Object.assign(SCENARIO_MATCHS,{lyc_prep:['rival','technique'],lyc_academie:['tec
 
 /* Quart de finale et match pour le bronze : mêmes choix que la demi-finale. */
 MATCH_SITUATIONS.forEach(s=>{ if((s.id==='coupe_quart'||s.id==='coupe_bronze')&&!s.choix) s.choix=MATCH_SITUATIONS.find(x=>x.id==='coupe_demi').choix; });
+
+/* Clubs de jeunes hors Amérique du Nord : [région, ville, nom, couleur, couleur2, abréviation, prestige]. Noms inventés, villes réelles. */
+const CLUBS_JEUNES=[
+ ['af','Kinshasa','Jeunes du Fleuve','#0B5FA5','#F5C542','KIN',1],['af','Douala','Espoirs du Littoral','#166534','#FDE68A','DOU',1],['af','Dakar','Jeunes Lions','#B45309','#FEF3C7','DAK',1],['af','Lagos','Young Eagles','#047857','#F3F4F6','LAG',1],['af','Luanda','Jovens Estrelas','#B91C1C','#111827','LUA',1],
+ ['af','Kigali',"Académie de la Colline",'#1D4ED8','#FBBF24','KGL',2],['af','Abidjan','Académie des Lagunes','#C2410C','#F3F4F6','ABJ',2],['af','Le Caire','Jeunes du Nil','#7C1D1D','#E5E7EB','CAI',2],['af','Tunis','Espoirs de Carthage','#BE123C','#F3F4F6','TUN',2],
+ ['af','Saly','Académie Continentale','#0E5E3A','#F5C542','SAC',3],['af','Kigali','Grand Club Élite','#1E3A8A','#FBBF24','KGE',3],['af','Casablanca','Grand Club Atlas','#7C1D1D','#F3F4F6','CAS',3],['af','Luanda','Grand Club Atlantique','#0F766E','#FDE68A','LGA',3],
+ ['eu','Nantes','Section Jeunes','#166534','#F3F4F6','NAN',1],['eu','Zagreb','Jeunes Basket','#1E40AF','#F3F4F6','ZAG',1],['eu','Varsovie','Jeunes Basket','#B91C1C','#F3F4F6','VAR',1],['eu','Kaunas','Jeunes Espoirs','#047857','#FDE68A','KAU',1],
+ ['eu','Lyon','Jeunes Espoirs','#7C1D1D','#E5E7EB','LYO',2],['eu','Milan','Académie Jeunes','#1D4ED8','#F3F4F6','MIL',2],['eu','Berlin','Jeunes Basket','#374151','#F59E0B','BER',2],['eu','Ljubljana','Jeunes Espoirs','#0F766E','#F3F4F6','LJU',2],['eu','Istanbul','Jeunes Basket','#B91C1C','#111827','IST',2],
+ ['eu','Belgrade','Centre de Formation Élite','#7C1D1D','#F3F4F6','BEL',3],['eu','Barcelone','Centre de Formation Élite','#1E3A8A','#FBBF24','BCN',3],['eu','Athènes','Centre de Formation Olympique','#0B5FA5','#F3F4F6','ATH',3],['eu','Madrid','Centre de Formation Élite','#4B5563','#F3F4F6','MAD',3],
+ ['ot','Manille','Club de Quartier','#B91C1C','#FBBF24','MNL',1],['ot','Rio','Club de Quartier','#047857','#FDE68A','RIO',1],['ot','Santo Domingo','Club de Quartier','#1D4ED8','#F3F4F6','SDO',1],['ot','Osaka','Club de Quartier','#7C1D1D','#F3F4F6','OSA',1],
+ ['ot','Buenos Aires','Jeunes Espoirs','#0E7490','#F3F4F6','BUE',2],['ot','Séoul','Jeunes Espoirs','#BE123C','#F3F4F6','SEO',2],['ot','Mexico','Jeunes Espoirs','#166534','#F3F4F6','MEX',2],['ot','Beyrouth','Jeunes Espoirs','#B91C1C','#E5E7EB','BEI',2],
+ ['ot','São Paulo','Centre de Formation Élite','#1F2937','#F59E0B','SPA',3],['ot','Melbourne','Académie Élite','#0B2A4A','#F5C542','MEL',3],['ot','Tokyo','Académie Élite','#7C1D1D','#F3F4F6','TKY',3]
+].map((r,i)=>({id:'c'+i,region:r[0],ville:r[1],nom:r[2],couleur:r[3],couleur2:r[4],abr:r[5],prestige:r[6]}));
+function equipeJeunes(origine,region){
+  let niv=PRESTIGE_ORIGINE[origine]||2; const r=Math.random();
+  if(origine==='fils') niv=r<0.5?3:2; else if(origine==='bitume'&&r<0.25) niv=2; else if(origine==='academie'&&r<0.3) niv=2;
+  const liste=region==='na'?LYCEES:CLUBS_JEUNES.filter(x=>x.region===region);
+  const l=liste.filter(x=>x.prestige===niv);
+  return pick(l.length?l:liste);
+}
+
+SCENARIOS.push(
+  {id:'lyc_hs',fac:true,generique:false,cond:e=>e.niveau==='fac'&&!!e.fac.lycee&&(e.fac.etape||1)===1&&e.origine==='hs',
+   question:__("Dernière année au lycée public : comment brilles-tu au circuit AAU ?"),
+   contexte:e=>__t("Tu joues pour {#0} {#1} et, l'été, pour un club AAU. Les recruteurs te regardent surtout dans les tournois d'été.",[e.franchise.ville,e.franchise.nom]),
+   choix:[
+    c('Performance',__("Enchaîner les tournois AAU pour te montrer"),{scoring:2,athletisme:1,risqueBlessure:2}),
+    c('Carrière / Contrat',__("Contacter toi-même les entraîneurs d'université"),{reputation:2,coteEquipe:1}),
+    c('Image / Marque',__("Poster tes meilleurs moments d'AAU sur les réseaux"),{reputation:3}),
+    c('Vie perso',__("Garder tes week-ends pour ta famille et tes cours"),{alchimieEquipe:3,risqueBlessure:-3}),
+    c('Risque / Legacy',__("Défier le meilleur joueur de l'État en tournoi"),{reputation:5,risqueBlessure:2})
+  ]},
+  {id:'lyc_club',fac:true,generique:false,cond:e=>e.niveau==='fac'&&!!e.fac.lycee&&(e.fac.etape||1)===1&&e.origine==='club',
+   question:__("Dans le club de ton quartier : comment te fais-tu remarquer ?"),
+   contexte:e=>__t("Tu joues pour {#0} {#1}, un petit club sans grands moyens. Le terrain est en mauvais état et le matériel manque, mais ton entraîneur croit en toi.",[e.franchise.ville,e.franchise.nom]),
+   choix:[
+    c('Performance',__("T'entraîner seul tôt le matin avant les cours"),{athletisme:2,basketIQ:1}),
+    c('Carrière / Contrat',__("Demander à ton entraîneur de t'ouvrir des portes dans d'autres clubs"),{reputation:2,coteEquipe:1}),
+    c('Image / Marque',__("Filmer tes matchs et les partager sur les réseaux"),{reputation:4}),
+    c('Vie perso',__("Aider ta famille tout en gardant du temps pour le basket"),{alchimieEquipe:3,risqueBlessure:-2}),
+    c('Risque / Legacy',__("Défier les meilleurs de la ville dans un tournoi de quartier"),{reputation:5,risqueBlessure:2})
+  ]},
+  {id:'lyc_academie_af',fac:true,generique:false,cond:e=>e.niveau==='fac'&&!!e.fac.lycee&&(e.fac.etape||1)===1&&e.origine==='academie_af',
+   question:__("À l'académie du continent : comment saisis-tu ta chance ?"),
+   contexte:e=>__t("Tu as rejoint {#0} {#1}, qui forme les meilleurs jeunes du continent. Des recruteurs d'Europe et des États-Unis viennent régulièrement observer les entraînements.",[e.franchise.ville,e.franchise.nom]),
+   choix:[
+    c('Performance',__("Suivre le programme intensif de l'académie à la lettre"),{athletisme:2,basketIQ:1}),
+    c('Carrière / Contrat',__("Demander aux coachs de t'inscrire aux camps de détection"),{reputation:2,coteEquipe:1}),
+    c('Image / Marque',__("Accepter d'être filmé pour un reportage sur l'académie"),{reputation:4}),
+    c('Vie perso',__("Rester en contact avec ta famille malgré l'éloignement"),{alchimieEquipe:3,risqueBlessure:-2}),
+    c('Risque / Legacy',__("Annoncer que tu veux partir en Europe dès cette année"),{reputation:4,scoring:1,risqueBlessure:3})
+  ]},
+  {id:'lyc_sport_etudes',fac:true,generique:false,cond:e=>e.niveau==='fac'&&!!e.fac.lycee&&(e.fac.etape||1)===1&&e.origine==='sport_etudes',
+   question:__("Entre le lycée et le club : comment équilibres-tu ?"),
+   contexte:e=>__t("Tu es en section sport-études à {#0} {#1}. Cours le matin, basket l'après-midi, et un club régional qui te suit de près.",[e.franchise.ville,e.franchise.nom]),
+   choix:[
+    c('Performance',__("Ajouter une séance de tir individuelle avant les cours"),{scoring:2,risqueBlessure:1}),
+    c('Carrière / Contrat',__("Demander à ton club de te faire monter en équipe première"),{reputation:2,coteEquipe:1}),
+    c('Image / Marque',__("Poster ton quotidien de sport-études"),{reputation:3}),
+    c('Vie perso',__("Garder du temps pour tes cours et tes amis"),{basketIQ:2,risqueBlessure:-2}),
+    c('Risque / Legacy',__("Annoncer viser le titre national des jeunes"),{reputation:4,risqueBlessure:2})
+  ]},
+  {id:'jeunes_etape2',fac:true,generique:false,cond:e=>e.niveau==='fac'&&!!e.fac.lycee&&e.fac.etape===2,
+   question:__("Saison à un niveau supérieur : comment t'imposes-tu ?"),
+   contexte:e=>__t("Tu rejoins {#0} {#1}, un cran au-dessus. Les joueurs sont plus durs, les recruteurs plus nombreux : c'est ta chance de passer un palier.",[e.franchise.ville,e.franchise.nom]),
+   choix:[
+    c('Performance',__("Travailler ta condition physique pour tenir le rythme"),{athletisme:2,risqueBlessure:-1}),
+    c('Carrière / Contrat',__("Discuter de ton rôle avec l'entraîneur dès le premier jour"),{coteEquipe:2,reputation:1}),
+    c('Image / Marque',__("Montrer ton niveau dans une vidéo de présentation"),{reputation:3}),
+    c('Vie perso',__("Prendre le temps de t'installer dans ta nouvelle ville"),{alchimieEquipe:3,risqueBlessure:-3}),
+    c('Risque / Legacy',__("Défier le meilleur joueur de l'équipe pour le poste de titulaire"),{reputation:5,risqueBlessure:2})
+  ]}
+);
+Object.assign(SCENARIO_MATCHS,{lyc_hs:['exterieur','rival'],lyc_club:['exterieur','rival'],lyc_academie_af:['technique','exterieur'],lyc_sport_etudes:['technique','buzzer'],jeunes_etape2:['rival','buzzer']});
+
+/* ---------- Interviews (toutes les 3 rencontres de saison régulière) : 5 réponses, une par axe ---------- */
+const INTERVIEWS=[
+  {id:'temps_jeu',cond:e=>e.meta.place<62,
+   question:__("Un journaliste te demande si tu es satisfait de ton temps de jeu."),
+   contexte:()=>__("Le micro est sous ton nez dans le couloir des vestiaires. Le coach écoutera sûrement."),
+   choix:[
+    c('Performance',__("Répondre que tu dois travailler plus dur pour mériter tes minutes"),{coach:5,place:2,vestiaire:2,reputation:1}),
+    c('Carrière / Contrat',__("Dire que tu mérites un plus grand rôle et que ton agent en parlera"),{place:3,coach:-4,vestiaire:-2,reputation:1}),
+    c('Image / Marque',__("Raconter ton parcours avec le sourire et laisser l'histoire parler"),{reputation:5,coach:1}),
+    c('Vie perso',__("Rester patient : tu es heureux d'être là et ta famille te soutient"),{vestiaire:4,coach:3,alchimieEquipe:2}),
+    c('Risque / Legacy',__("Lâcher que le coach se trompe sur toi"),{reputation:4,coach:-9,vestiaire:-3,place:-1})
+  ]},
+  {id:'collectif',cond:()=>true,
+   question:__("On te demande ce que tu penses du jeu collectif de l'équipe."),
+   contexte:()=>__("Le ballon circule mal depuis quelques matchs et la presse le sait."),
+   choix:[
+    c('Performance',__("Dire que tu vas hausser le rythme en défense pour créer des paniers faciles"),{coach:3,alchimieEquipe:2,vestiaire:1}),
+    c('Carrière / Contrat',__("Souligner que tu es prêt à porter plus de responsabilités"),{place:2,coach:1,vestiaire:-2,reputation:2}),
+    c('Image / Marque',__("Lancer une punchline qui fera le tour des réseaux"),{reputation:5,vestiaire:-1}),
+    c('Vie perso',__("Féliciter tes coéquipiers et prendre ta part de responsabilité"),{vestiaire:5,alchimieEquipe:3,coach:2}),
+    c('Risque / Legacy',__("Dire que certains coéquipiers jouent trop pour eux"),{reputation:3,vestiaire:-8,alchimieEquipe:-6,coach:1})
+  ]},
+  {id:'systeme',cond:()=>true,
+   question:__("Le système du coach te convient-il ?"),
+   contexte:()=>__("La question n'est pas innocente : on parle de tensions dans le staff."),
+   choix:[
+    c('Performance',__("Expliquer que tu t'adaptes et que tu progresses dans son système"),{coach:5,alchimieEquipe:1,place:1}),
+    c('Carrière / Contrat',__("Dire que tu aimerais un système qui te met plus en valeur"),{place:2,coach:-5,reputation:1,vestiaire:-1}),
+    c('Image / Marque',__("Éviter la question avec une réponse élégante"),{reputation:2,vestiaire:1}),
+    c('Vie perso',__("Remercier le coach pour sa confiance et sa franchise"),{coach:5,vestiaire:2}),
+    c('Risque / Legacy',__("Critiquer ouvertement une décision du coach"),{coach:-10,reputation:4,vestiaire:-2,place:-2})
+  ]},
+  {id:'critique',cond:()=>true,
+   question:__("Un ancien joueur dit à la télé que tu es surcoté."),
+   contexte:()=>__("L'extrait tourne en boucle sur les réseaux depuis ce matin."),
+   choix:[
+    c('Performance',__("Ne rien dire et répondre sur le terrain"),{coach:3,reputation:2,vestiaire:2}),
+    c('Carrière / Contrat',__("Rappeler tes chiffres et ton contrat avec calme"),{reputation:3}),
+    c('Image / Marque',__("Répondre avec humour pour retourner la salle"),{reputation:5,vestiaire:1}),
+    c('Vie perso',__("Dire que tu respectes son avis et que tu es bien entouré"),{vestiaire:3,reputation:2,alchimieEquipe:1}),
+    c('Risque / Legacy',__("Le défier publiquement de venir t'affronter"),{reputation:6,vestiaire:-2,coach:-3,risqueBlessure:2})
+  ]},
+  {id:'vestiaire',cond:()=>true,
+   question:__("La presse veut savoir ce qui se passe dans le vestiaire."),
+   contexte:e=>{ const l=(e.matchsResultats||[]).slice(-3); const ok=l.filter(m=>m.reussi).length; return ok>=2?__("L'équipe sort de matchs solides, mais la presse cherche la petite histoire."):__("Après des matchs difficiles, la presse cherche des coupables."); },
+   choix:[
+    c('Performance',__("Dire que le groupe bosse et que les résultats viendront"),{coach:3,alchimieEquipe:2,vestiaire:2}),
+    c('Carrière / Contrat',__("Parler de l'ambition collective et du besoin de renforts"),{coach:-2,reputation:2,alchimieEquipe:-1,place:1}),
+    c('Image / Marque',__("Rester vague avec le sourire des grands soirs"),{reputation:3}),
+    c('Vie perso',__("Défendre le vestiaire : « Nous sommes une famille »"),{vestiaire:4,alchimieEquipe:5,coach:1}),
+    c('Risque / Legacy',__("Révéler une dispute pour faire réagir le groupe"),{reputation:5,alchimieEquipe:-7,vestiaire:-5,coach:-3})
+  ]},
+  {id:'hype',cond:e=>e.meta.reputation>=50||e.meta.place>=62,
+   question:__("Les médias te présentent comme une future star de la ligue."),
+   contexte:()=>__("Les caméras te suivent. Les vétérans, eux, observent."),
+   choix:[
+    c('Performance',__("Dire que tu n'as encore rien prouvé et qu'il reste du travail"),{coach:4,vestiaire:3,reputation:2}),
+    c('Carrière / Contrat',__("Assumer tes ambitions : tu veux un rôle de franchise player"),{place:3,reputation:3,vestiaire:-3,coach:-1}),
+    c('Image / Marque',__("Surfer sur la vague et lancer ta marque"),{reputation:6,vestiaire:-2}),
+    c('Vie perso',__("Renvoyer la lumière vers les vétérans qui t'ont aidé"),{vestiaire:6,alchimieEquipe:3,coach:2}),
+    c('Risque / Legacy',__("Te comparer aux légendes de la ligue"),{reputation:6,vestiaire:-6,coach:-2,place:1})
+  ]},
+  {id:'trade',cond:e=>e.saison>=2,
+   question:__("Des rumeurs de trade circulent à ton sujet."),
+   contexte:()=>__("Ton nom revient dans plusieurs articles. La direction n'a rien confirmé."),
+   choix:[
+    c('Performance',__("Dire que tu te concentres sur le prochain match"),{coach:4,vestiaire:2,alchimieEquipe:1}),
+    c('Carrière / Contrat',__("Dire que tu es ouvert à tout pour jouer plus"),{place:2,coach:-4,vestiaire:-2,reputation:2}),
+    c('Image / Marque',__("Laisser planer le mystère pour faire parler de toi"),{reputation:5,coach:-2,alchimieEquipe:-1}),
+    c('Vie perso',__("Dire que tu veux rester et construire ici"),{vestiaire:5,coach:3,alchimieEquipe:3}),
+    c('Risque / Legacy',__("Lâcher un « on verra » qui met le feu aux médias"),{reputation:5,coach:-5,vestiaire:-4,alchimieEquipe:-3})
+  ]}
+];
+
+/* ---------- Agence libre : interview en trois questions pour un joueur important ---------- */
+const FA_INTERVIEWS=[
+  {id:'fa1',question:__("« Ton avenir est la grande question de l'été. Tu restes ou tu pars ? »"),
+   contexte:()=>__("Les caméras sont là. Tout le marché écoute."),
+   choix:[
+    {...c('Performance',__("Dire que ton seul objectif est de gagner un titre"),{reputation:2,vestiaire:1}),chaud:0.03},
+    {...c('Carrière / Contrat',__("Dire que tu écouteras toutes les offres"),{reputation:1,vestiaire:-2}),chaud:0.06},
+    {...c('Image / Marque',__("Annoncer que tu feras ton choix en direct sur les réseaux"),{reputation:4,vestiaire:-1}),chaud:0.05},
+    {...c('Vie perso',__("Remercier ton équipe et les fans, quoi qu'il arrive"),{vestiaire:4,reputation:2,alchimieEquipe:1}),chaud:0},
+    {...c('Risque / Legacy',__("Laisser entendre que tu pourrais surprendre tout le monde"),{reputation:4,vestiaire:-3}),chaud:0.08}
+  ]},
+  {id:'fa2',question:__("On te demande ce que tu recherches avant tout dans ton prochain contrat."),
+   contexte:()=>__("Les directeurs sportifs de la ligue prennent des notes."),
+   choix:[
+    {...c('Performance',__("Un projet sportif ambitieux et un vrai rôle"),{reputation:1,vestiaire:1}),chaud:0.02},
+    {...c('Carrière / Contrat',__("Un contrat long et sécurisant"),{reputation:1}),chaud:0.04},
+    {...c('Image / Marque',__("Un marché où ta marque peut exploser"),{reputation:3}),chaud:0.04},
+    {...c('Vie perso',__("La stabilité pour toi et ta famille"),{vestiaire:2,alchimieEquipe:1}),chaud:-0.02},
+    {...c('Risque / Legacy',__("Le plus gros contrat de l'histoire de la franchise"),{reputation:3,vestiaire:-2}),chaud:0.08}
+  ]},
+  {id:'fa3',question:__("Alors, où vas-tu signer ?"),
+   contexte:()=>__("Les équipes ont déjà préparé leurs offres. Ta réponse va orienter les propositions."),
+   choix:[
+    {...c('Performance',__("Chez un candidat au titre"),{reputation:1}),pref:'contender',chaud:0.02},
+    {...c('Carrière / Contrat',__("Là où l'offre sera la plus forte"),{reputation:1}),pref:'argent',chaud:0.05},
+    {...c('Image / Marque',__("Dans un gros marché"),{reputation:2}),pref:'marche',chaud:0.02},
+    {...c('Vie perso',__("À la maison, avec les gens qui m'ont tout donné"),{vestiaire:3,alchimieEquipe:2}),pref:'maison',chaud:0},
+    {...c('Risque / Legacy',__("Dans une équipe qui bâtit tout autour de moi"),{reputation:2}),pref:'star',chaud:0.03}
+  ]}
+];
+function themeInterviewParId(id){ return INTERVIEWS.find(x=>x.id===id)||FA_INTERVIEWS.find(x=>x.id===id)||null; }

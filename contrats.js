@@ -66,13 +66,42 @@ function genererOffresContrat(mode){
   offres.push({k:'maison_flex',fid:own.id,annees:2,salaire:cl(S*1.05),tag:'maison',ntc:false,optJ:true});
   offres.push({k:'ext_equipe',fid:autres[0].id,annees:Math.min(4,longue),salaire:cl(S*0.93),tag:'contender',ntc:false,optJ:false});
   offres.push({k:'ext_equipe',fid:autres[1].id,annees:Math.min(4,longue),salaire:cl(S*1.08),tag:tags[0]==='contender'?'marche':tags[0],ntc:false,optJ:false});
-  if(ntcEligible()&&S>plafond()*0.08) offres.push({k:'maison_ntc',fid:own.id,annees:longue,salaire:cl(S*0.97),tag:'maison',ntc:true,optJ:false});
+  const _ntc=ntcEligible()&&S>plafond()*0.08;
+  if(_ntc) offres.push({k:'maison_ntc',fid:own.id,annees:longue,salaire:cl(S*0.97),tag:'maison',ntc:true,optJ:false});
   else if(age>=31||S<min*2.2) offres.push({k:'veteran',fid:autres[2].id,annees:1,salaire:cl(Math.max(min,S*0.5)),tag:'contender',ntc:false,optJ:false});
   else offres.push({k:'pari',fid:own.id,annees:1,salaire:cl(S*1.12),tag:'maison',ntc:false,optJ:false});
+  offres.push({k:'agence',fid:own.id,annees:0,salaire:0,tag:'maison',ntc:false,optJ:false});
   return offres;
+}
+/* ---------- Agence libre : le marché s'ouvre, avec interview pour les joueurs importants ---------- */
+function joueurImportant(){ const d=etat.distinctions; return (etat.meta.reputation>=60&&moyenneStats()>=66)||d.allStar>0||d.mvp>0; }
+function genererOffresAgence(prime,pref){
+  const o_=genererOffresAgenceBrut(prime,pref), mx=maxPart()*plafond();
+  o_.forEach((o,i)=>{ if(o.salaire>=mx-0.05) o.salaire=r1(mx*(1-0.02*i)); });
+  return o_;
+}
+function genererOffresAgenceBrut(prime,pref){
+  const own=etat.franchise, age=etat.age, S=valeurMarche()*plafond(), max=maxPart()*plafond(), min=minimumLigue();
+  const cl=v=>r1(clamp(v,min,max)), longue=age>=33?2:age>=31?3:5;
+  const autres=melangerOrdre(FRANCHISES.filter(f=>f.id!==own.id)); let n=0;
+  const eq=(tag,m)=>({k:'ext_equipe',fid:autres[n++%autres.length].id,annees:Math.min(4,longue),salaire:cl(S*m),tag,ntc:false,optJ:false});
+  const maison=(m,ntc,flex)=>({k:ntc?'maison_ntc':flex?'maison_flex':'maison_longue',fid:own.id,annees:flex?2:longue,salaire:cl(S*m),tag:'maison',ntc:!!ntc,optJ:!!flex});
+  const p=prime||1, ntcOk=ntcEligible()&&S>plafond()*0.08;
+  if(pref==='contender') return [eq('contender',p*1.03),eq('contender',p*0.98),eq('contender',p*0.93),eq('marche',p*1.08),maison(p*0.97)];
+  if(pref==='argent') return [eq('marche',p*1.2),eq('reconstruction',p*1.14),eq('contender',p*1.05),eq('marche',p),maison(p)];
+  if(pref==='marche') return [eq('marche',p*1.04),eq('marche',p),eq('marche',p*0.95),eq('contender',p),maison(p*0.97)];
+  if(pref==='maison') return [maison(p*1.05,ntcOk),maison(p*1.1,false,true),eq('contender',p),eq('marche',p*1.05),eq('reconstruction',p*0.98)];
+  if(pref==='star') return [eq('reconstruction',p*1.1),eq('reconstruction',p*1.05),eq('reconstruction',p),eq('contender',p*0.98),maison(p*0.97)];
+  return [eq('contender',0.93),eq('marche',1.0),eq('reconstruction',0.97),eq('marche',0.9),maison(1.0)];
+}
+function ouvrirAgenceLibre(){
+  if(joueurImportant()){ etat.interview={id:'fa1',kind:'agence',etape:0,chaud:0,pref:null,ordre:melangerOrdre([0,1,2,3,4]),suite:'agence',resultat:null}; etat.phase='interview'; }
+  else etat.offres=genererOffresAgence(1,null);
+  sauvegarder();
 }
 function accepterOffreContrat(i){
   const o=(etat.offres||[])[i]; if(!o) return;
+  if(o.k==='agence') return ouvrirAgenceLibre();
   if(o.k==='refus'){ etat.refusExt=true; etat.offres=null; return suiteHorsSaison(); }
   const f=franchiseParId(o.fid)||etat.franchise;
   if(f.id!==etat.franchise.id) changerFranchise(f,o.tag);
@@ -215,6 +244,10 @@ const TITRES_OFFRE={
   ext5:__("Extension rookie : 5 ans"),ext4:__("Extension rookie : 4 ans, option joueur"),refus:__("Refuser et attendre l'agence libre")
 };
 function carteOffreContrat(o,i){
+  if(o.k==='agence'){
+    const txt=joueurImportant()?__("Tu es un joueur recherché : interview en trois questions, puis les équipes viennent avec de plus grosses offres."):__("Tu fais le tour du marché : les autres équipes te feront des offres.");
+    return `<button class="carte-choix carte-offre" data-i="${i}" style="--barre:#22B8CF;flex-direction:column;align-items:flex-start;gap:6px"><p><b>${escapeHtml(__("Ouvrir l'agence libre"))}</b></p><span style="font-size:12.5px;color:var(--text-muted)">${escapeHtml(txt)}</span></button>`;
+  }
   const f=franchiseParId(o.fid)||etat.franchise;
   const titre=TITRES_OFFRE[o.k]||'';
   const chiffres=o.annees?__t("{#0} · {#1} par an · total {#2}",[fmtAns(o.annees),fmtM(o.salaire),fmtM(o.salaire*o.annees)]):__("Pas de nouveau contrat maintenant : tu joues ta dernière année rookie, puis tu seras agent libre (avec risque de perdre ton équipe).");

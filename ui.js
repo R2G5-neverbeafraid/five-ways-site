@@ -17,7 +17,7 @@ function attacherLycee(){
   });
 }
 function renderChemin(){
-  if(!cheminOrdreTemp) cheminOrdreTemp=melangerOrdre(CHEMINS_PREDRAFT);
+  if(!cheminOrdreTemp) cheminOrdreTemp=melangerOrdre(CHEMINS_PREDRAFT.slice(0,5));
   return __t("<div class=\"screen\">\n    {#0}\n    <h1 class=\"titre-ecran\">Quelle route avant la Draft ?</h1>\n    <p class=\"flavor\">Chaque voie a ses compromis, entre âge d'entrée dans la ligue et solidité de ton profil.</p>\n    <div class=\"pile-choix\">{#1}</div>\n  </div>",[logoCompact(),cheminOrdreTemp.map((c,i)=>`<button class="carte-choix" data-i="${i}"><p>${escapeHtml(__s(c.texte))}</p></button>`).join('')]);
 }
 function attacherChemin(){
@@ -27,11 +27,15 @@ function attacherChemin(){
 }
 function renderOffresFac(){
   const pitch={3:__("Un programme d'élite : télévision nationale, mais grosse concurrence pour le temps de jeu."),2:__("Un programme solide : un vrai rôle dès la première année."),1:__("Un petit programme : tu seras la star, mais loin des projecteurs.")};
+  const pitchClub={3:__("Un grand club : le meilleur niveau, mais une forte concurrence."),2:__("Un club ambitieux : un vrai rôle dès la première saison."),1:__("Un petit club : tu seras titulaire, mais loin des projecteurs.")};
+  const carte=(i,titre,sous,txt,coul)=>`<button class="carte-choix" data-i="${i}" style="--barre:${escapeHtml(coul||'var(--border)')};flex-direction:column;align-items:flex-start;gap:5px"><p>${escapeHtml(titre)}</p>${sous?`<span style="font-size:12.5px;font-weight:600">${escapeHtml(sous)}</span>`:''}<span style="font-size:12.5px;color:var(--text-muted)">${escapeHtml(txt)}</span></button>`;
   const cartes=etat.offresFac.map((o,i)=>{
-    if(o.k==='fac'){ const e=franchiseParId(o.fid); return `<button class="carte-choix" data-i="${i}" style="--barre:${escapeHtml(e.couleur)};flex-direction:column;align-items:flex-start;gap:5px"><p>${escapeHtml(e.ville)} ${escapeHtml(e.nom)}</p><span style="font-size:12.5px;font-weight:600">${escapeHtml(__(TIERS_FAC[o.tier]))}</span><span style="font-size:12.5px;color:var(--text-muted)">${escapeHtml(pitch[o.tier])}</span></button>`; }
+    if(o.k==='fac'){ const e=franchiseParId(o.fid); return carte(i,e.ville+' '+e.nom,__(TIERS_FAC[o.tier]),pitch[o.tier],e.couleur); }
+    if(o.k==='club'){ const e=franchiseParId(o.fid); return carte(i,e.ville+' '+e.nom,'',o.stay?__("Rester dans le club de ta ville : un rôle central, mais peu de nouveauté."):o.eu?__("Un essai en Europe : si tu convaincs, tu intègres le centre de formation."):pitchClub[o.tier],e.couleur); }
     return `<button class="carte-choix" data-i="${i}"><p>${escapeHtml(__s(CHEMINS_PREDRAFT[o.i].texte))}</p></button>`;
   }).join('');
-  return __t("<div class=\"screen\">\n    {#0}\n    <h1 class=\"titre-ecran\">Les universités t'appellent</h1>\n    <p class=\"flavor\">Ta saison de lycée a parlé. Voici les offres reçues, et deux autres routes possibles.</p>\n    <div class=\"pile-choix\">{#1}</div>\n  </div>",[logoCompact(),cartes]);
+  if(regionDe(etat.pays)==='na') return __t("<div class=\"screen\">\n    {#0}\n    <h1 class=\"titre-ecran\">Les universités t'appellent</h1>\n    <p class=\"flavor\">Ta saison de lycée a parlé. Voici les offres reçues, et deux autres routes possibles.</p>\n    <div class=\"pile-choix\">{#1}</div>\n  </div>",[logoCompact(),cartes]);
+  return __t("<div class=\"screen\">\n    {#0}\n    <h1 class=\"titre-ecran\">Les offres arrivent</h1>\n    <p class=\"flavor\">Ta saison a parlé. Voici les propositions reçues : à toi de choisir ta route.</p>\n    <div class=\"pile-choix\">{#1}</div>\n  </div>",[logoCompact(),cartes]);
 }
 function attacherOffresFac(){
   document.querySelectorAll('.carte-choix').forEach(btn=>{ btn.onclick=()=>{ choisirOffreFac(Number(btn.dataset.i)); render(); }; });
@@ -51,7 +55,7 @@ function renderDraftNight(){
   const ovr=Math.round(moyenneStats());
   const caseStat=(lbl,val)=>`<div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center"><div class="chiffre" style="font-size:26px;line-height:1.1">${val}</div><div style="font-size:11px;font-weight:600;letter-spacing:.1em;color:var(--text-muted);margin-top:4px">${lbl}</div></div>`;
   const rivs=rivaux().filter(r=>r.type==='equipe');
-  return __t("<div class=\"screen\">\n    {#0}\n    <p class=\"logo\" style=\"color:var(--text-muted)\">DRAFT NIGHT</p>\n    <div style=\"background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;text-align:center\">\n      <div style=\"font-size:12px;font-weight:600;letter-spacing:.14em;color:var(--text-muted)\">CHOIX N° · {#1}</div>\n      <div class=\"chiffre\" style=\"font-size:84px;line-height:1;color:var(--accent);margin:6px 0\">{#2}</div>\n      <div class=\"titre-ecran\" style=\"font-size:24px\">{#3} {#4}</div>\n      <div style=\"font-size:13px;color:var(--text-muted);margin-top:6px\">Tu rejoins la franchise à {#5} ans.</div>\n    </div>\n    <div style=\"display:flex;gap:10px\">{#6}{#7}{#8}{#9}</div>\n    {#10}\n    {#11}\n    <button id=\"btn-rejoindre\" class=\"bouton\">COMMENCER LA SAISON 1</button>\n  </div>",[logoCompact(),tierLabel.toUpperCase(),etat.draftPick,escapeHtml(f.ville),escapeHtml(f.nom),etat.age,caseStat('OVR',ovr),caseStat(__('POSTE'),escapeHtml(posteCourt(etat.poste))),etat.pays?caseStat(__('PAYS'),escapeHtml((PAYS.find(p=>p[0]===etat.pays)||['','--'])[1])):'',caseStat(__('MAILLOT'),'#'+(etat.numero!==undefined?etat.numero:'—')),rivs.length?__t("<div class=\"rival-card\" style=\"background:#2A1820\"><p class=\"rival-titre\">RIVALITÉS HISTORIQUES</p>{#0}</div>",[rivs.map(r=>`<p class="rival-ligne"><span style="color:#E5484D;letter-spacing:2px">${pastilles(r.niveau)}</span> ${escapeHtml(r.nom)} — ${escapeHtml(__s(r.detail))}</p>`).join('')]):'',resumeContratRookie()]);
+  return __t("<div class=\"screen\">\n    {#0}\n    <p class=\"logo\" style=\"color:var(--text-muted)\">DRAFT NIGHT</p>\n    <div style=\"background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;text-align:center\">\n      <div style=\"font-size:12px;font-weight:600;letter-spacing:.14em;color:var(--text-muted)\">CHOIX N° · {#1}</div>\n      <div class=\"chiffre\" style=\"font-size:84px;line-height:1;color:var(--accent);margin:6px 0\">{#2}</div>\n      <div class=\"titre-ecran\" style=\"font-size:24px\">{#3} {#4}</div>\n      <div style=\"font-size:13px;color:var(--text-muted);margin-top:6px\">Tu rejoins la franchise à {#5} ans.</div>\n    </div>\n    <div style=\"display:flex;gap:10px\">{#6}{#7}{#8}{#9}</div>\n    {#10}\n    {#11}\n    <button id=\"btn-rejoindre\" class=\"bouton\">COMMENCER LA SAISON 1</button>\n  </div>",[logoCompact(),tierLabel.toUpperCase(),etat.draftPick,escapeHtml(f.ville),escapeHtml(f.nom),etat.age,caseStat('OVR',ovr),caseStat(__('POSTE'),escapeHtml(posteCourt(etat.poste))),etat.pays?caseStat(__('PAYS'),escapeHtml((PAYS.find(p=>p[0]===etat.pays)||['','--'])[1])):'',caseStat(__('MAILLOT'),'#'+(etat.numero!==undefined?etat.numero:'—')),rivs.length?__t("<div class=\"rival-card\" style=\"background:#2A1820\"><p class=\"rival-titre\">RIVALITÉS HISTORIQUES</p>{#0}</div>",[rivs.map(r=>`<p class="rival-ligne"><span style="color:#E5484D;letter-spacing:2px">${pastilles(r.niveau)}</span> ${escapeHtml(r.nom)} — ${escapeHtml(__s(r.detail))}</p>`).join('')]):'',resumeContratRookie()+roleDepartHtml()]);
 }
 function attacherDraftNight(){
   document.getElementById('btn-rejoindre').onclick=()=>{ etat.file=[]; if(Math.random()<probSponsor()) etat.file.push('sponsor'); suiteHorsSaison(); render(); };
@@ -114,7 +118,9 @@ function etiquettesOrigine(o){
 const DE_SVG='<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1.2" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.2" fill="currentColor"/></svg>';
 function ecranOrigine(){
   const t=creationTemp;
-  const cartes=ORIGINES.map(o=>`<button class="carte-choix carte-origine" data-orig="${o.id}" style="--barre:${o.id===t.origine?'var(--accent)':'var(--border)'};${o.id===t.origine?'background:var(--chip);':''};flex-direction:column;align-items:flex-start;gap:6px"><p>${escapeHtml(__(o.nom))}</p><span style="font-size:12.5px;color:var(--text-muted)">${escapeHtml(__(o.desc))}</span></button>`).join('');
+  const liste=originesPourPays(t.pays);
+  if(t.origine&&!liste.some(o=>o.id===t.origine)){ t.origine=null; t.tire=false; }
+  const cartes=liste.map(o=>`<button class="carte-choix carte-origine" data-orig="${o.id}" style="--barre:${o.id===t.origine?'var(--accent)':'var(--border)'};${o.id===t.origine?'background:var(--chip);':''};flex-direction:column;align-items:flex-start;gap:6px"><p>${escapeHtml(__(o.nom))}</p><span style="font-size:12.5px;color:var(--text-muted)">${escapeHtml(__(o.desc))}</span></button>`).join('');
   const tire=t.tire&&t.origine?`<p class="flavor" id="txt-tire">${escapeHtml(__t("Le hasard a décidé : {#0}.",[__(origineParId(t.origine).nom)]))}</p>`:'';
   return `<h1 class="titre-ecran">${__('Ton origine')}</h1><p class="flavor">${__("D'où viens-tu, avant les projecteurs ?")}</p><div class="pile-choix">${cartes}<button class="carte-choix" id="btn-hasard" style="--barre:var(--accent);flex-direction:row;align-items:center;gap:12px"><span class="ico" style="color:var(--accent);display:flex">${DE_SVG}</span><p>${__("Laisser le hasard choisir")}</p></button></div>${tire}`;
 }
@@ -150,7 +156,7 @@ function attacherCreation(){
   if(pl) pl.onclick=()=>{ t.numero=(t.numero+1)%100; render(); };
   const r=document.getElementById('btn-retour'); if(r) r.onclick=()=>{ t.etape--; render(); };
   document.querySelectorAll('[data-orig]').forEach(b=>b.onclick=()=>{ t.origine=b.dataset.orig; t.tire=false; render(); });
-  const de=document.getElementById('btn-hasard'); if(de) de.onclick=()=>{ t.origine=pick(ORIGINES).id; t.tire=true; render(); };
+  const de=document.getElementById('btn-hasard'); if(de) de.onclick=()=>{ t.origine=pick(originesPourPays(t.pays)).id; t.tire=true; render(); };
   const bc=document.getElementById('btn-continuer'); if(bc) bc.onclick=()=>{
     if(t.etape<NB_ETAPES){ t.etape++; render(); return; }
     nouvellePartie(t.nom.trim().toUpperCase()||__('JOUEUR'), t.poste);
@@ -160,7 +166,7 @@ function attacherCreation(){
 }
 function renderTour(){
   const f=etat.franchise;
-  return __t("<div class=\"screen\">\n    <div class=\"entete-tour\">\n      <span class=\"puce\" style=\"background:{#0}\"></span>\n      <span class=\"meta\">{#1}</span>\n      <span class=\"meta\">{#2} ans</span>\n      <span class=\"meta\">{#3} {#4}</span>\n    </div>\n    {#5}\n    <div class=\"pile-choix\">{#6}</div>\n    {#7}\n    <button id=\"btn-reset\" class=\"lien-reset\">Recommencer une carrière</button>\n  </div>",[f.couleur,libSaison(),etat.age,escapeHtml(f.ville),escapeHtml(f.nom),etat.scenarioActuel?`<h1 class="titre-ecran">${escapeHtml(__s(etat.scenarioActuel.question))}</h1><p class="flavor">${escapeHtml(__s(etat.scenarioActuel.contexte))}</p>`:`<p class="flavor">${texteFlavor()}</p>`,etat.tourActuel.map((c,i)=>carteChoixHtml(c,i)).join(''),contratChipHtml()+statsMiniHtml()]);
+  return __t("<div class=\"screen\">\n    <div class=\"entete-tour\">\n      <span class=\"puce\" style=\"background:{#0}\"></span>\n      <span class=\"meta\">{#1}</span>\n      <span class=\"meta\">{#2} ans</span>\n      <span class=\"meta\">{#3} {#4}</span>\n    </div>\n    {#5}\n    <div class=\"pile-choix\">{#6}</div>\n    {#7}\n    <button id=\"btn-reset\" class=\"lien-reset\">Recommencer une carrière</button>\n  </div>",[f.couleur,libSaison(),etat.age,escapeHtml(f.ville),escapeHtml(f.nom),etat.scenarioActuel?`<h1 class="titre-ecran">${escapeHtml(__s(etat.scenarioActuel.question))}</h1><p class="flavor">${escapeHtml(__s(etat.scenarioActuel.contexte))}</p>`:`<p class="flavor">${texteFlavor()}</p>`,etat.tourActuel.map((c,i)=>carteChoixHtml(c,i)).join(''),contratChipHtml()+roleChipHtml()+statsMiniHtml()]);
 }
 function attacherTour(){
   document.querySelectorAll('.carte-choix').forEach(btn=>{
@@ -211,14 +217,14 @@ function bracketHtml(tour,stade){
 function renderFinReguliere(){
   const s=etat.saisonSport, q=s.qualifie;
   const prem=bracketHtml(0);
-  return __t("<div class=\"screen\">\n    {#0}\n    <p class=\"logo\" style=\"color:#F5C542\">FIN DE LA SAISON RÉGULIÈRE</p>\n    <div class=\"bilan-saison anim\">\n      <p class=\"byline\">BILAN · {#1}</p>\n      <div class=\"vd\"><span class=\"chiffre\"><b class=\"cnt\" data-v=\"{#2}\">0</b> – <b class=\"cnt\" data-v=\"{#3}\">0</b></span><span class=\"rang\">{#4} de la conférence</span></div>\n    </div>\n    {#5}\n    <button id=\"btn-suite-reg\" class=\"bouton\">{#6}</button>\n  </div>",[enteteMatch(),etat.saison&&!estFac()?__('SAISON ')+etat.saison:'',s.v,s.d,texteRang(s.rang),q?estLycee()?__t("<div class=\"annonce ok anim\" style=\"animation-delay:.3s\"><p class=\"annonce-t\">QUALIFIÉ POUR LE TOURNOI D'ÉTAT</p><p class=\"annonce-s\">Tu es {#0} de ta ligue. 4 tours à gagner. À chaque tour, un match couperet : réussis ton coup et tu avances, rate-le et ta saison de lycée s'arrête.</p></div>{#1}",[texteRang(s.rang),prem]):estFac()?__t("<div class=\"annonce ok anim\" style=\"animation-delay:.3s\"><p class=\"annonce-t\">QUALIFIÉ POUR LE TOURNOI NATIONAL</p><p class=\"annonce-s\">Tu es {#0} de ta conférence. 4 tours à gagner. À chaque tour, un match couperet : réussis ton coup et tu avances, rate-le et ta saison universitaire s'arrête.</p></div>{#1}",[texteRang(s.rang),prem]):__t("<div class=\"annonce ok anim\" style=\"animation-delay:.3s\"><p class=\"annonce-t\">QUALIFIÉ POUR LES PLAYOFFS</p><p class=\"annonce-s\">Tu es {#0}. 4 tours à gagner. À chaque tour, un match décisif : réussis ton coup et tu avances, rate-le et la saison s'arrête.</p></div>{#1}",[texteRang(s.rang),prem])
-      :estLycee()?__t("<div class=\"annonce ko anim\" style=\"animation-delay:.3s\"><p class=\"annonce-t\">NON QUALIFIÉ</p><p class=\"annonce-s\">Tu termines {#0} de ta ligue : pas de tournoi d'État cette saison. Seuls les 8 premiers se qualifient.</p></div>",[texteRang(s.rang)]):estFac()?__t("<div class=\"annonce ko anim\" style=\"animation-delay:.3s\"><p class=\"annonce-t\">NON QUALIFIÉ</p><p class=\"annonce-s\">Tu termines {#0} de ta conférence : pas de tournoi national cette saison. Seuls les 8 premiers se qualifient.</p></div>",[texteRang(s.rang)]):__t("<div class=\"annonce ko anim\" style=\"animation-delay:.3s\"><p class=\"annonce-t\">NON QUALIFIÉ</p><p class=\"annonce-s\">Tu termines {#0} : pas de playoffs cette saison. Seuls les 8 premiers de la conférence se qualifient.</p></div>",[texteRang(s.rang)]),q?(estFac()?__("Commencer le tournoi"):__("Commencer les playoffs")):__("Voir le bilan de la saison")]);
+  return __t("<div class=\"screen\">\n    {#0}\n    <p class=\"logo\" style=\"color:#F5C542\">FIN DE LA SAISON RÉGULIÈRE</p>\n    <div class=\"bilan-saison anim\">\n      <p class=\"byline\">BILAN · {#1}</p>\n      <div class=\"vd\"><span class=\"chiffre\"><b class=\"cnt\" data-v=\"{#2}\">0</b> – <b class=\"cnt\" data-v=\"{#3}\">0</b></span><span class=\"rang\">{#4} de la conférence</span></div>\n    </div>\n    {#5}\n    <button id=\"btn-suite-reg\" class=\"bouton\">{#6}</button>\n  </div>",[enteteMatch(),etat.saison&&!estFac()?__('SAISON ')+etat.saison:'',s.v,s.d,texteRang(s.rang),q?estLycee()&&!jeunesNA()?__t("<div class=\"annonce ok anim\" style=\"animation-delay:.3s\"><p class=\"annonce-t\">QUALIFIÉ POUR LA PHASE FINALE</p><p class=\"annonce-s\">Tu es {#0} de ton championnat. 4 tours à gagner. À chaque tour, un match couperet : réussis ton coup et tu avances, rate-le et ta saison s'arrête.</p></div>{#1}",[texteRang(s.rang),prem]):estLycee()?__t("<div class=\"annonce ok anim\" style=\"animation-delay:.3s\"><p class=\"annonce-t\">QUALIFIÉ POUR LE TOURNOI D'ÉTAT</p><p class=\"annonce-s\">Tu es {#0} de ta ligue. 4 tours à gagner. À chaque tour, un match couperet : réussis ton coup et tu avances, rate-le et ta saison de lycée s'arrête.</p></div>{#1}",[texteRang(s.rang),prem]):estFac()?__t("<div class=\"annonce ok anim\" style=\"animation-delay:.3s\"><p class=\"annonce-t\">QUALIFIÉ POUR LE TOURNOI NATIONAL</p><p class=\"annonce-s\">Tu es {#0} de ta conférence. 4 tours à gagner. À chaque tour, un match couperet : réussis ton coup et tu avances, rate-le et ta saison universitaire s'arrête.</p></div>{#1}",[texteRang(s.rang),prem]):__t("<div class=\"annonce ok anim\" style=\"animation-delay:.3s\"><p class=\"annonce-t\">QUALIFIÉ POUR LES PLAYOFFS</p><p class=\"annonce-s\">Tu es {#0}. 4 tours à gagner. À chaque tour, un match décisif : réussis ton coup et tu avances, rate-le et la saison s'arrête.</p></div>{#1}",[texteRang(s.rang),prem])
+      :estLycee()&&!jeunesNA()?__t("<div class=\"annonce ko anim\" style=\"animation-delay:.3s\"><p class=\"annonce-t\">NON QUALIFIÉ</p><p class=\"annonce-s\">Tu termines {#0} de ton championnat : pas de phase finale cette saison. Seuls les 8 premiers se qualifient.</p></div>",[texteRang(s.rang)]):estLycee()?__t("<div class=\"annonce ko anim\" style=\"animation-delay:.3s\"><p class=\"annonce-t\">NON QUALIFIÉ</p><p class=\"annonce-s\">Tu termines {#0} de ta ligue : pas de tournoi d'État cette saison. Seuls les 8 premiers se qualifient.</p></div>",[texteRang(s.rang)]):estFac()?__t("<div class=\"annonce ko anim\" style=\"animation-delay:.3s\"><p class=\"annonce-t\">NON QUALIFIÉ</p><p class=\"annonce-s\">Tu termines {#0} de ta conférence : pas de tournoi national cette saison. Seuls les 8 premiers se qualifient.</p></div>",[texteRang(s.rang)]):__t("<div class=\"annonce ko anim\" style=\"animation-delay:.3s\"><p class=\"annonce-t\">NON QUALIFIÉ</p><p class=\"annonce-s\">Tu termines {#0} : pas de playoffs cette saison. Seuls les 8 premiers de la conférence se qualifient.</p></div>",[texteRang(s.rang)]),q?(estFac()?__("Commencer le tournoi"):__("Commencer les playoffs")):__("Voir le bilan de la saison")]);
 }
 function attacherFinReguliere(){
   Son.buzzer(); vibrer([60,40,60]);
   document.getElementById('btn-suite-reg').onclick=()=>{ Son.clic(); if(etat.playoffs) Son.foule(); avancerFinReguliere(); render(); };
 }
-function pourcentageOption(c){ const b=clamp(etat.stats[c.stat]/100+c.mod,0.12,0.9)+(etat.phase==='playoffs'?bonusPlayoffs():0); return Math.round(clamp(b,0.05,0.95)*100); }
+function pourcentageOption(c){ const b=clamp(etat.stats[c.stat]/100+c.mod,0.12,0.9)+(etat.phase==='playoffs'?bonusPlayoffs():0)+bonusCoupe()+bonusRole(); return Math.round(clamp(b,0.05,0.95)*100); }
 function libStadeCoupe(m){
   const n=etat.matchsResultats.filter(x=>x.stade==='poule').length+1;
   if(m.stade==='poule') return __t("PHASE DE GROUPES · MATCH {#0}/3",[n]);
@@ -227,7 +233,7 @@ function libStadeCoupe(m){
 function renderMatch(){
   const m=etat.matchActuel;
   const rv=m.rivalId?rivaux().find(r=>r.id===m.rivalId):null;
-  return __t("<div class=\"screen\">\n    {#0}\n    {#1}\n    {#2}\n    <h1 class=\"titre-ecran\">{#3}</h1>\n    {#4}\n    <p class=\"flavor\">{#5}</p>\n    <div class=\"pile-choix\">{#6}</div>\n    <p class=\"aide-geste\">{#7}Ensuite, arrête la jauge dans la zone verte (jusqu'à +14 %). Hors de la zone, l'action est perdue.</p>\n    {#8}\n  </div>",[enteteMatch(),m.playoff?__t("<p class=\"logo\" style=\"color:#F5C542\">{#2} · {#0}</p>{#1}",[escapeHtml((toursPO()[m.tour]||'').toUpperCase()),bracketHtml(m.tour),estLycee()?__("TOURNOI D'ÉTAT"):estFac()?__('TOURNOI NATIONAL'):__('PLAYOFFS')]):(m.coupe&&m.stade?`<p class="logo">${escapeHtml(libStadeCoupe(m))}</p>`:__t("<p class=\"logo\">MOMENT DE MATCH {#0}/{#1}</p>",[etat.matchsResultats.length+1,etat.matchsTotal])),tableauHtml(m.tableau),escapeHtml(__s(m.titre)),rv?__t("<div class=\"rival-card\"><p class=\"rival-titre\">RIVALITÉ {#0}</p><p class=\"rival-ligne\">Bilan face à {#1} : {#2}V – {#3}D · enjeux amplifiés</p></div>",[pastilles(rv.niveau),escapeHtml(__court(rv.court)),rv.bilan.v,rv.bilan.d]):'',escapeHtml(__s(m.contexte)),m.choix.map((c,i)=>`<button class="carte-choix carte-match" data-i="${i}" style="--barre:${COUL_STATS[c.stat]||'var(--border)'}"><p>${escapeHtml(__s(c.texte))}</p><span class="pct"><b class="chiffre">${pourcentageOption(c)}</b>%<small>${escapeHtml(LBL[c.stat]||'')}</small></span></button>`).join(''),m.playoff?__("Adversaires de haut niveau : les pourcentages sont plus bas qu'en saison régulière. "):'',statsMiniHtml()]);
+  return __t("<div class=\"screen\">\n    {#0}\n    {#1}\n    {#2}\n    <h1 class=\"titre-ecran\">{#3}</h1>\n    {#4}\n    <p class=\"flavor\">{#5}</p>\n    <div class=\"pile-choix\">{#6}</div>\n    <p class=\"aide-geste\">{#7}Ensuite, arrête la jauge dans la zone verte (jusqu'à +14 %). Hors de la zone, l'action est perdue.</p>\n    {#8}\n  </div>",[enteteMatch(),m.playoff?__t("<p class=\"logo\" style=\"color:#F5C542\">{#2} · {#0}</p>{#1}",[escapeHtml((toursPO()[m.tour]||'').toUpperCase()),bracketHtml(m.tour),estLycee()?(jeunesNA()?__("TOURNOI D'ÉTAT"):__("PHASE FINALE DES JEUNES")):estFac()?__('TOURNOI NATIONAL'):__('PLAYOFFS')]):(m.coupe&&m.stade?`<p class="logo">${escapeHtml(libStadeCoupe(m))}</p>`:__t("<p class=\"logo\">MOMENT DE MATCH {#0}/{#1}</p>",[etat.matchsResultats.length+1,etat.matchsTotal])),tableauHtml(m.tableau),escapeHtml(__s(m.titre)),rv?__t("<div class=\"rival-card\"><p class=\"rival-titre\">RIVALITÉ {#0}</p><p class=\"rival-ligne\">Bilan face à {#1} : {#2}V – {#3}D · enjeux amplifiés</p></div>",[pastilles(rv.niveau),escapeHtml(__court(rv.court)),rv.bilan.v,rv.bilan.d]):'',escapeHtml(__s(m.contexte)),m.choix.map((c,i)=>`<button class="carte-choix carte-match" data-i="${i}" style="--barre:${COUL_STATS[c.stat]||'var(--border)'}"><p>${escapeHtml(__s(c.texte))}</p><span class="pct"><b class="chiffre">${pourcentageOption(c)}</b>%<small>${escapeHtml(LBL[c.stat]||'')}</small></span></button>`).join(''),m.playoff?__("Adversaires de haut niveau : les pourcentages sont plus bas qu'en saison régulière. "):'',statsMiniHtml()]);
 }
 function attacherMatch(){
   document.querySelectorAll('.carte-match').forEach(btn=>{
@@ -289,6 +295,64 @@ function bilanSaisonHtml(s){
   const points=[1,2,3,4,5].map(i=>`<i class="${st>=i?'on':''}"></i>`).join('');
   return __t("<div class=\"bilan-saison anim\" style=\"animation-delay:.1s\">\n    <p class=\"byline\">BILAN DE LA SAISON</p>\n    <div class=\"vd\"><span class=\"chiffre\"><b class=\"cnt\" data-v=\"{#0}\">0</b> – <b class=\"cnt\" data-v=\"{#1}\">0</b></span><span class=\"rang\">{#2} de la conférence</span></div>\n    <div class=\"playoffs\"><div class=\"pts\">{#3}</div><span>{#4}</span></div>\n  </div>",[v,d,texteRang(rang),points,escapeHtml(stadesSaison()[st])]);
 }
+/* ---------- Rôle, bilan chiffré et interviews ---------- */
+function roleDepartHtml(){
+  if(etat.niveau!=='pro'||!etat.meta) return '';
+  const p=etat.meta.place, i=roleIdx(p);
+  const txt=i>=3?__("On compte sur toi dès le premier match."):i===2?__("Tu entres dans la rotation, mais il faudra confirmer."):i===1?__("Tu commences sur le banc. À toi de gratter des minutes, à l'entraînement comme en match."):__("Tu commences en fin de banc : très peu de minutes, tout est à prouver.");
+  return `<div class="bilan-saison anim"><p class="byline">${__("TON RÔLE DE DÉPART")}</p><h2 class="titre-ecran" style="font-size:20px">${escapeHtml(ROLES[i])} · ≈ ${Math.round(minutesJeu(p))} ${__("min par match")}</h2><p class="flavor">${escapeHtml(txt)}</p></div>`;
+}
+function roleChipHtml(){
+  if(etat.niveau!=='pro'||!etat.meta||etat.phase!=='jeu') return '';
+  const p=etat.meta.place;
+  return `<p class="recap">${__("Rôle")} : <b>${escapeHtml(ROLES[roleIdx(p)])}</b> · ≈ ${Math.round(minutesJeu(p))} ${__("min par match")}</p>`;
+}
+function statsSaisonHtml(st){
+  if(!st||typeof st!=='object') return '';
+  const n=v=>(Number(v)||0).toFixed(1), gp=Math.round(Number(st.gp))||0, ng=Math.round(Number(st.ng))||82, man=Math.round(Number(st.manques))||0;
+  const box=(v,l)=>`<div><b>${v}</b><span>${l}</span></div>`;
+  const absence=st.blesse?__t("Blessure : {#0} matchs manqués",[man]):man===1?__("1 match manqué (petit pépin)"):man===1?__("1 match manqué (petit pépin)"):man>0?__t("{#0} matchs manqués (petits pépins)",[man]):__("Aucune absence : saison complète");
+  const dist=[];
+  if(st.allStar) dist.push(__("All-Star")); if(st.mvp) dist.push('MVP'); if(st.titre) dist.push(__("Champion"));
+  (Array.isArray(st.trophees)?st.trophees:[]).forEach(t=>dist.push(__s(String(t))));
+  const ra=Math.max(0,Math.min(4,Math.round(Number(st.roleAvant))||0)), rb=Math.max(0,Math.min(4,Math.round(Number(st.roleApres))||0));
+  const role=ra===rb?`${__("Rôle")} : <b>${escapeHtml(ROLES[rb])}</b>`:`${__("Rôle")} : ${escapeHtml(ROLES[ra])} ${rb>ra?'▲':'▼'} <b>${escapeHtml(ROLES[rb])}</b>`;
+  return `<div class="bilan-saison anim" style="animation-delay:.15s"><p class="byline">${__("TA SAISON EN CHIFFRES")}</p>
+    <div class="stats-ligne">${box(n(st.pts),__("PTS"))}${box(n(st.reb),__("REB"))}${box(n(st.ast),__("PASSES"))}${box(n(st.min),__("MIN"))}</div>
+    <p class="recap">${__t("Matchs joués : {#0} / {#1}",[gp,ng])} · ${escapeHtml(absence)}</p>
+    <p class="recap">${role}</p>
+    <p class="recap">${dist.length?__("Distinctions")+' : <b>'+dist.map(escapeHtml).join(' · ')+'</b>':__("Aucune distinction majeure cette saison.")}</p></div>`;
+}
+function jaugesRelationsHtml(){
+  const m=etat.meta, L=[[__("COACH"),m.coach],[__("VESTIAIRE"),m.vestiaire],[__("IMAGE"),m.reputation],[__("CHIMIE"),m.alchimieEquipe]];
+  return `<div class="stats-mini">${L.map(([n,v])=>`<span class="stat-m">${escapeHtml(n)} <b class="n">${Math.round(v)}</b><i><b style="width:${Math.max(0,Math.min(100,Math.round(v)))}%"></b></i></span>`).join('')}</div>`;
+}
+function renderInterview(){
+  const th=interviewTheme(), iv=etat.interview;
+  const ag=iv.kind==='agence';
+  const tete=`${enteteMatch()}<p class="logo" style="color:#F5C542">${ag?escapeHtml(__t("INTERVIEW · AGENCE LIBRE · QUESTION {#0}/3",[(iv.etape|0)+1])):__("INTERVIEW")}</p><h1 class="titre-ecran">${escapeHtml(__s(th.question))}</h1>`;
+  if(!iv.resultat){
+    return `<div class="screen">${tete}<p class="flavor">${escapeHtml(__s(th.contexte(etat)))}</p><div class="pile-choix">${iv.ordre.map((k,i)=>carteChoixHtml(th.choix[k],i)).join('')}</div>${ag?'':jaugesRelationsHtml()}<p class="aide-geste">${ag?__("Tes réponses influencent le marché : plus tu fais parler de toi, plus les offres seront élevées."):__("Tes réponses changent la façon dont le coach, tes coéquipiers et le public te voient.")}</p></div>`;
+  }
+  const r=iv.resultat, d=r.d||{};
+  const fl=v=>v>=5?'▲▲':v>0?'▲':v<=-5?'▼▼':v<0?'▼':'=';
+  const chip=(l,v)=>`<span class="delta ${v>0?'pos':v<0?'neg':''}">${l} ${fl(v)}</span>`;
+  const lignes=[];
+  if(d.coach>0) lignes.push(__("Le coach apprécie ta réponse.")); else if(d.coach<0) lignes.push(__("Le coach n'a pas aimé ta réponse."));
+  if(d.vestiaire>0) lignes.push(__("Tes coéquipiers te respectent davantage.")); else if(d.vestiaire<0) lignes.push(__("Tes coéquipiers prennent mal tes propos."));
+  if(d.reputation>0) lignes.push(__("Le public te voit d'un meilleur œil.")); else if(d.reputation<0) lignes.push(__("L'opinion publique se retourne contre toi."));
+  if(d.alchimie>0) lignes.push(__("L'ambiance du groupe s'améliore.")); else if(d.alchimie<0) lignes.push(__("La chimie de l'équipe en prend un coup."));
+  const ra=Math.max(0,Math.min(4,r.roleAvant|0)), rb=Math.max(0,Math.min(4,r.roleApres|0));
+  const annonce=rb>ra?`<div class="annonce ok"><p class="annonce-t">${__("PLUS DE MINUTES")}</p><p class="annonce-s">${escapeHtml(__t("Le coach te fait confiance : tu passes de {#0} à {#1}.",[ROLES[ra],ROLES[rb]]))}</p></div>`:rb<ra?`<div class="annonce ko"><p class="annonce-t">${__("MOINS DE MINUTES")}</p><p class="annonce-s">${escapeHtml(__t("Le coach réduit ton temps de jeu : tu passes de {#0} à {#1}.",[ROLES[ra],ROLES[rb]]))}</p></div>`:'';
+  return `<div class="screen">${tete}<div class="action-choisie" style="--barre:${COULEURS_AXES[r.axe]||'var(--border)'}"><p>${escapeHtml(__s(r.texte))}</p></div>
+    <div class="deltas">${ag?'':chip(__("Coach"),d.coach)}${chip(__("Coéquipiers"),d.vestiaire)}${chip(__("Image publique"),d.reputation)}${ag?chip(__("Marché"),r.chaud|0):chip(__("Chimie"),d.alchimie)}</div>
+    ${lignes.map(l=>`<p class="recap">${escapeHtml(l)}</p>`).join('')}${annonce}
+    ${ag?'':`<p class="recap">${__("Rôle")} : <b>${escapeHtml(ROLES[rb])}</b> · ≈ ${Math.round(minutesJeu(etat.meta.place))} ${__("min par match")}</p>${jaugesRelationsHtml()}`}<button id="btn-interview-suite" class="bouton">${ag?((iv.etape|0)<2?__("Question suivante"):__("Voir les offres")):__("Continuer")}</button></div>`;
+}
+function attacherInterview(){
+  document.querySelectorAll('.carte-choix').forEach(btn=>{ btn.onclick=()=>{ Son.clic(); repondreInterview(Number(btn.dataset.i)); render(); window.scrollTo(0,0); }; });
+  const b=document.getElementById('btn-interview-suite'); if(b) b.onclick=()=>{ Son.clic(); finirInterview(); render(); window.scrollTo(0,0); };
+}
 function renderResultat(){
   const r=etat.dernierResultat;
   const deltasHtml=Object.keys(LIBELLES_STATS).map(k=>{const v=Number(r.deltas[k])||0;return v?`<span class="delta ${v>0?'pos':'neg'}">${LIBELLES_STATS[k]} ${v>0?'▲ +':'▼ −'}<b class="cnt" data-v="${Math.abs(v)}">0</b></span>`:`<span class="delta">${LIBELLES_STATS[k]} =</span>`;}).join('');
@@ -306,7 +370,7 @@ function renderResultat(){
   const autre=[].concat(...liste.map(m=>Array.isArray(m.actus)?m.actus:[])).filter(a=>a&&(a.src==='RIVAL'||a.src==='FANS')).pop();
   if(autre) actus.push(autre);
   const fil=actus.length?__t("<div class=\"fil anim\" style=\"animation-delay:{#0}s\"><p class=\"byline\">À LA UNE</p>{#1}</div>",[0.4+liste.length*0.25,actus.map(a=>`<div class="actu"><span class="src">${escapeHtml(__(a.src))}</span><span>${escapeHtml(__s(a.texte))}</span></div>`).join('')]):'';
-  return __t("<div class=\"screen\">\n    {#0}\n    {#1}\n    <div class=\"anim\" style=\"animation-delay:.2s;border:1px solid {#2};background:color-mix(in srgb,{#3} 12%,var(--surface));border-radius:12px;padding:14px 15px\"><h1 class=\"titre-ecran\" style=\"font-size:20px\">{#4}</h1></div>\n    {#5}\n    {#6}\n    {#7}\n    {#8}\n    <button id=\"btn-suite\" class=\"bouton\">Saison suivante</button>\n  </div>",[enteteMatch(),bilanSaisonHtml(r.saison),COULEURS_AXES[r.axe]||'var(--border)',COULEURS_AXES[r.axe]||'#26345A',escapeHtml(__s(r.texteChoix)),matchHtml,fil,deltasHtml?`<div class="deltas anim" style="animation-delay:${0.6+liste.length*0.25}s">${deltasHtml}</div>`:__("<p class=\"recap\">Aucun changement de stats cette saison.</p>"),evtsHtml?`<div class="badges anim" style="animation-delay:${0.8+liste.length*0.25}s">${evtsHtml}</div>`:''+gainsSaisonHtml(r)]);
+  return __t("<div class=\"screen\">\n    {#0}\n    {#1}\n    <div class=\"anim\" style=\"animation-delay:.2s;border:1px solid {#2};background:color-mix(in srgb,{#3} 12%,var(--surface));border-radius:12px;padding:14px 15px\"><h1 class=\"titre-ecran\" style=\"font-size:20px\">{#4}</h1></div>\n    {#5}\n    {#6}\n    {#7}\n    {#8}\n    <button id=\"btn-suite\" class=\"bouton\">Saison suivante</button>\n  </div>",[enteteMatch(),bilanSaisonHtml(r.saison)+statsSaisonHtml(r.stats),COULEURS_AXES[r.axe]||'var(--border)',COULEURS_AXES[r.axe]||'#26345A',escapeHtml(__s(r.texteChoix)),matchHtml,fil,deltasHtml?`<div class="deltas anim" style="animation-delay:${0.6+liste.length*0.25}s">${deltasHtml}</div>`:__("<p class=\"recap\">Aucun changement de stats cette saison.</p>"),evtsHtml?`<div class="badges anim" style="animation-delay:${0.8+liste.length*0.25}s">${evtsHtml}</div>`:''+gainsSaisonHtml(r)]);
 }
 function attacherResultat(){
   document.getElementById('btn-suite').onclick=()=>{ Son.clic(); continuerApresResultat(); render(); };
@@ -326,7 +390,7 @@ function attacherRetraite(){
   document.getElementById('btn-rejouer').onclick=()=>{ reinitialiser(); };
   document.getElementById('btn-partager').onclick=async()=>{
     const sc=calculerScore();
-    const txt=__t("{#0} — {#1} — {#2} saisons — score {#3}/96 sur Five Ways, by 25 Labs. Fais mieux !",[etat.nom,__(etat.poste),etat.saison-1,sc.total]);
+    const txt=__t("{#0} — {#1} — {#2} saisons — score {#3} sur Five Ways, by 25 Labs. Fais mieux !",[etat.nom,__(etat.poste),etat.saison-1,sc.total]);
     try{ if(navigator.share) await navigator.share({text:txt}); else { await navigator.clipboard.writeText(txt); alert(__("Résultat copié.")); } }catch(_){}
   };
 }
@@ -350,6 +414,7 @@ function renderEcran(){
   if(etat.phase==='combine'){ app.innerHTML=renderCombine(); attacherCombine(); return; }
   if(etat.phase==='draftnight'){ app.innerHTML=renderDraftNight(); attacherDraftNight(); return; }
   if(etat.phase==='match'||etat.phase==='playoffs'){ app.innerHTML=renderMatch(); attacherMatch(); return; }
+  if(etat.phase==='interview'){ app.innerHTML=renderInterview(); attacherInterview(); return; }
   if(etat.phase==='finreguliere'){ app.innerHTML=renderFinReguliere(); attacherFinReguliere(); return; }
   if(etat.phase==='resultat'){ app.innerHTML=renderResultat(); attacherResultat(); return; }
   if(etat.phase==='retraite'){ app.innerHTML=renderRetraite(); attacherRetraite(); return; }

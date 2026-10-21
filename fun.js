@@ -17,7 +17,7 @@ function genererTableau(m){
     const typeC=etat.scenarioActuel&&etat.scenarioActuel.coupe?etat.scenarioActuel.coupe.type:'monde';
     let cand=Object.keys(CONTINENTS).filter(p=>p!==pays);
     if(typeC==='continent'&&pays) cand=cand.filter(p=>CONTINENTS[p]===CONTINENTS[pays]);
-    const adv=cand.length?cand[((etat.saison||0)*7+13+Math.max(0,rangC)*5)%cand.length]:pick(Object.keys(CONTINENTS));
+    const adv=(m.adv&&CONTINENTS[m.adv])?m.adv:(cand.length?cand[((etat.saison||0)*7+13+Math.max(0,rangC)*5)%cand.length]:pick(Object.keys(CONTINENTS)));
     nb=CODE3[adv]||abrev(adv); ca='#4C6FFF'; cb='#E5484D';
     fa=(pays&&DRAPEAUX[pays])||null; fb=DRAPEAUX[adv]||null;
   } else {
@@ -47,8 +47,9 @@ function scoreApres(tab,reussi){
 
 /* ---------- Saison sportive (bilan, classement, playoffs) ---------- */
 const STADES_FAC=[__("Non qualifié"),__("Éliminé au premier tour du Tournoi"),__("Éliminé en Sweet 16"),__("Éliminé en Final Four"),__("Finaliste national"),__("Champion universitaire")];
+const STADES_JEUNES=[__("Non qualifié"),__("Éliminé au premier tour"),__("Éliminé en quarts de finale"),__("Éliminé en demi-finales nationales"),__("Finaliste national des jeunes"),__("Champion national des jeunes")];
 const STADES_LYC=[__("Non qualifié"),__("Éliminé au premier tour"),__("Éliminé en quarts de finale"),__("Éliminé en demi-finales d'État"),__("Finaliste d'État"),__("Champion d'État")];
-function stadesSaison(){ return estLycee()?STADES_LYC:estFac()?STADES_FAC:STADES; }
+function stadesSaison(){ return estLycee()?(jeunesNA()?STADES_LYC:STADES_JEUNES):estFac()?STADES_FAC:STADES; }
 const STADES=[__("Non qualifié"),__("Éliminé au premier tour"),__("Éliminé en demi-finales"),__("Éliminé en finale de conférence"),__('Finaliste'),__('Champion')];
 function genererSaisonRegliere(reussis,total,moyenne){
   const force=clamp(-0.02+etat.meta.coteEquipe/300+etat.meta.alchimieEquipe/700+(total?reussis/total:0.5)*0.30+(moyenne-55)/200+(Math.random()-0.5)*0.12,0.15,0.90);
