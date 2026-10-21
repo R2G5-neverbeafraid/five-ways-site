@@ -26,7 +26,7 @@ jobs:
       - name: Préparer uniquement les fichiers publics
         run: |
           mkdir _site
-          cp index.html 404.html style.css data.js engine.js fun.js ui.js robots.txt _headers .nojekyll _site/
+          cp index.html 404.html style.css i18n.js en.js data.js engine.js fun.js ui.js robots.txt _headers .nojekyll _site/
           cp -r .well-known _site/
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -13,7 +13,7 @@ function rivauxEquipes(franchiseId){
 }
 function creerRivalEquipe(rv){
   const f=franchiseParId(rv.id);
-  return {id:'eq-'+rv.id,type:'equipe',nom:f.ville+' '+f.nom,court:'les '+f.nom,detail:rv.detail,equipe:f.ville+' '+f.nom,niveau:3,bilan:{v:0,d:0}};
+  return {id:'eq-'+rv.id,type:'equipe',nom:f.ville+' '+f.nom,court:__('les ')+f.nom,detail:rv.detail,equipe:f.ville+' '+f.nom,niveau:3,bilan:{v:0,d:0}};
 }
 function creerRivalJoueur(type){
   const utilises=rivaux().map(r=>r.nom);
@@ -42,20 +42,20 @@ function genererDuel(){
   for(const cand of pool){ x-=cand.niveau; if(x<=0){ r=cand; break; } }
   const n=r.court, E=r.type==='equipe';
   const contextes={
-    equipe:`Match contre ${r.nom} : ${r.detail}. La salle est électrique et chaque possession compte double.`,
-    promo:`${r.nom} te fait face. Même promotion, même poste : tout le monde attend ce duel.`,
-    veteran:`${r.nom}, la légende que tu cherches à détrôner, est en face de toi ce soir.`,
-    ancien:`Ton ancien coéquipier ${r.nom} joue désormais pour ${r.equipe}. Il connaît tes habitudes, et toi les siennes.`,
-    media:`${r.nom} t'a lancé des piques toute la semaine. Ce soir, la presse regarde qui aura le dernier mot.`
+    equipe:__t("Match contre {#0} : {#1}. La salle est électrique et chaque possession compte double.",[r.nom,r.detail]),
+    promo:__t("{#0} te fait face. Même promotion, même poste : tout le monde attend ce duel.",[r.nom]),
+    veteran:__t("{#0}, la légende que tu cherches à détrôner, est en face de toi ce soir.",[r.nom]),
+    ancien:__t("Ton ancien coéquipier {#0} joue désormais pour {#1}. Il connaît tes habitudes, et toi les siennes.",[r.nom,r.equipe]),
+    media:__t("{#0} t'a lancé des piques toute la semaine. Ce soir, la presse regarde qui aura le dernier mot.",[r.nom])
   };
   const choix=[
-    o(E?'Imposer une défense agressive dès le coup d\'envoi':`Défendre sur ${n} à chaque possession`,'defense',-0.05,0.08,{reputation:4,defense:1},{reputation:-2,risqueBlessure:3},E?'Ta défense étouffe l\'adversaire et la salle s\'enflamme.':`${n} n'arrive plus à respirer.`,E?'L\'adversaire contourne ta défense et prend l\'avantage.':`${n} te prend de vitesse et la salle le sent.`),
-    o(E?'Prendre les premiers tirs pour imposer ton rythme':`Répondre à ${n} panier pour panier`,'scoring',-0.1,0.1,{reputation:6,scoring:1},{reputation:-4},E?'Tu ouvres le score et le stade vibre.':`Tu réponds à chaque panier de ${n}.`,E?'Tu forces et les ratés s\'enchaînent.':`${n} te répond coup pour coup et reprend l'avantage.`),
-    o('Faire circuler le ballon pour user la défense','playmaking',0.0,0.06,{alchimieEquipe:4,reputation:2},{alchimieEquipe:-2},'Le collectif prend le dessus.','Le jeu se grippe et l\'adversaire en profite.'),
-    o(E?'Chambrer leurs supporters pour les déstabiliser':`Chambrer ${n} devant toute la salle`,'basketIQ',-0.15,0.1,{reputation:7},{reputation:-5,alchimieEquipe:-2},'La provocation fonctionne : ta réputation grimpe.','La provocation se retourne contre toi.'),
-    o(E?'Garder la tête froide et suivre le plan':`Ignorer ${n} et jouer ton match`,'basketIQ',0.1,0.05,{basketIQ:1,alchimieEquipe:2},{reputation:-1},'Tu restes dans ton plan et tu le paies.','Trop de retenue : tu laisses l\'initiative à l\'adversaire.')
+    o(E?__("Imposer une défense agressive dès le coup d'envoi"):__t("Défendre sur {#0} à chaque possession",[n]),'defense',-0.05,0.08,{reputation:4,defense:1},{reputation:-2,risqueBlessure:3},E?__("Ta défense étouffe l'adversaire et la salle s'enflamme."):__t("{#0} n'arrive plus à respirer.",[n]),E?__("L'adversaire contourne ta défense et prend l'avantage."):__t("{#0} te prend de vitesse et la salle le sent.",[n])),
+    o(E?__("Prendre les premiers tirs pour imposer ton rythme"):__t("Répondre à {#0} panier pour panier",[n]),'scoring',-0.1,0.1,{reputation:6,scoring:1},{reputation:-4},E?__("Tu ouvres le score et le stade vibre."):__t("Tu réponds à chaque panier de {#0}.",[n]),E?__("Tu forces et les ratés s'enchaînent."):__t("{#0} te répond coup pour coup et reprend l'avantage.",[n])),
+    o(__("Faire circuler le ballon pour user la défense"),'playmaking',0.0,0.06,{alchimieEquipe:4,reputation:2},{alchimieEquipe:-2},__("Le collectif prend le dessus."),__("Le jeu se grippe et l'adversaire en profite.")),
+    o(E?__("Chambrer leurs supporters pour les déstabiliser"):__t("Chambrer {#0} devant toute la salle",[n]),'basketIQ',-0.15,0.1,{reputation:7},{reputation:-5,alchimieEquipe:-2},__("La provocation fonctionne : ta réputation grimpe."),__("La provocation se retourne contre toi.")),
+    o(E?__("Garder la tête froide et suivre le plan"):__t("Ignorer {#0} et jouer ton match",[n]),'basketIQ',0.1,0.05,{basketIQ:1,alchimieEquipe:2},{reputation:-1},__("Tu restes dans ton plan et tu le paies."),__("Trop de retenue : tu laisses l'initiative à l'adversaire."))
   ];
-  return {id:'duel',titre:(E?'Classique — ':'Duel — ')+r.nom,contexte:contextes[r.type],choix:melangerOrdre(choix),rivalId:r.id};
+  return {id:'duel',titre:(E?__("Classique — "):__("Duel — "))+r.nom,contexte:contextes[r.type],choix:melangerOrdre(choix),rivalId:r.id};
 }
 let cheminOrdreTemp=null;
 let combineOrdreTemp=null;
@@ -223,7 +223,7 @@ function resoudreMatch(opt,geste){
 }
 
 /* ---------- Fin de saison régulière, playoffs ---------- */
-const TOURS_PLAYOFFS=['Premier tour','Demi-finales de conférence','Finale de conférence','Finales'];
+const TOURS_PLAYOFFS=[__("Premier tour"),__("Demi-finales de conférence"),__("Finale de conférence"),__('Finales')];
 let PO_BASE=[-0.26,-0.30,-0.34,-0.38];
 function bonusPlayoffs(){
   const t=etat.playoffs?etat.playoffs.tour:0;
@@ -235,20 +235,20 @@ function terminerSaisonRegulier(entree){
   const bonus=etat.bonusSaison*0.6;
   const evenements=[];
   const moyenne=moyenneStats();
-  if(Math.random()<Math.max(0,(moyenne-58)/80+bonus/2)){ etat.distinctions.allStar++; evenements.push('Sélection All-Star !'); }
-  if(moyenne>68 && Math.random()<Math.max(0,0.01+(moyenne-68)/120+bonus/3)){ etat.distinctions.mvp++; evenements.push('Élu MVP de la saison !'); }
+  if(Math.random()<Math.max(0,(moyenne-58)/80+bonus/2)){ etat.distinctions.allStar++; evenements.push(/*fr*/'Sélection All-Star !'); }
+  if(moyenne>68 && Math.random()<Math.max(0,0.01+(moyenne-68)/120+bonus/3)){ etat.distinctions.mvp++; evenements.push(/*fr*/'Élu MVP de la saison !'); }
   if(etat.meta.risqueBlessure>60 && Math.random()<0.18){
     etat.malusAccumule+=3;
     etat.meta.risqueBlessure=Math.max(0,etat.meta.risqueBlessure-20);
-    evenements.push('Blessure — saison écourtée (−3 au score final)');
+    evenements.push(/*fr*/'Blessure — saison écourtée (−3 au score final)');
   }
   let medaille=null;
   if(etat.scenarioActuel&&etat.scenarioActuel.coupe){
     const [poule,demi,finale]=etat.matchsResultats.slice(0,3).map(m=>m.reussi);
-    const nomC=etat.scenarioActuel.coupe.nom, avec=nomPays(etat)==='ta sélection'?'':' avec '+etat.pays;
-    if(poule&&demi&&finale){ medaille='or'; etat.distinctions.medailles=(etat.distinctions.medailles||0)+2; evenements.push(`Médaille d'or — ${nomC}${avec} !`); }
-    else if(poule&&demi){ medaille='argent'; etat.distinctions.medailles=(etat.distinctions.medailles||0)+1; evenements.push(`Médaille d'argent — ${nomC}${avec}`); }
-    else if(demi||(poule&&Math.random()<0.4)){ medaille='bronze'; etat.distinctions.medailles=(etat.distinctions.medailles||0)+1; evenements.push(`Médaille de bronze — ${nomC}${avec}`); }
+    const nomC=etat.scenarioActuel.coupe.nom, avec=aPays(etat)?__(' avec ')+nomPays(etat):'';
+    if(poule&&demi&&finale){ medaille='or'; etat.distinctions.medailles=(etat.distinctions.medailles||0)+2; evenements.push(__t("Médaille d'or — {#0}{#1} !",[nomC,avec])); }
+    else if(poule&&demi){ medaille='argent'; etat.distinctions.medailles=(etat.distinctions.medailles||0)+1; evenements.push(__t("Médaille d'argent — {#0}{#1}",[nomC,avec])); }
+    else if(demi||(poule&&Math.random()<0.4)){ medaille='bronze'; etat.distinctions.medailles=(etat.distinctions.medailles||0)+1; evenements.push(__t("Médaille de bronze — {#0}{#1}",[nomC,avec])); }
   }
   const reussis=etat.matchsResultats.filter(m=>m.reussi).length;
   const s=genererSaisonRegliere(reussis,etat.matchsResultats.length,moyenne);
@@ -282,8 +282,8 @@ function genererMatchPlayoff(tour){
     etat.situationsRecentes=[...recents,s.id].slice(-5);
     m={id:s.id,titre:s.titre,contexte:s.contexte,choix:melangerOrdre(s.choix)};
   }
-  const enjeu=tour===3?'Gagne et tu es champion.':'Gagne et tu passes au tour suivant.';
-  m.contexte=`Playoffs — ${TOURS_PLAYOFFS[tour]}. Match décisif de la série. ${enjeu} Perds et la saison s'arrête. ${m.contexte}`;
+  const enjeu=tour===3?__("Gagne et tu es champion."):__("Gagne et tu passes au tour suivant.");
+  m.contexte=__t("Playoffs — {#0}. Match décisif de la série. {#1} Perds et la saison s'arrête. {#2}",[TOURS_PLAYOFFS[tour],enjeu,m.contexte]);
   m.titre=`${TOURS_PLAYOFFS[tour]} · ${m.titre}`;
   m.playoff=true; m.tour=tour;
   m.tableau=genererTableau(m);
@@ -303,8 +303,8 @@ function resoudrePlayoffs(entree,reussi){
 function finaliserSaison(stade){
   const evenements=[...(etat.evenementsSaison||[])];
   const po=(etat.playoffs&&etat.playoffs.resultats)||[];
-  if(stade===5){ etat.distinctions.titres++; evenements.unshift('Titre remporté !'); }
-  else if(stade===4) evenements.unshift('Finaliste — battu en finale');
+  if(stade===5){ etat.distinctions.titres++; evenements.unshift(__("Titre remporté !")); }
+  else if(stade===4) evenements.unshift(__("Finaliste — battu en finale"));
   const ss=etat.saisonSport||{v:41,d:41,rang:8};
   const saisonSportive={v:ss.v,d:ss.d,rang:ss.rang,stade};
   const tous=[...etat.matchsResultats,...po];
@@ -337,7 +337,7 @@ function finaliserSaison(stade){
 }
 const HOF_KEY='five-ways-hof-v1';
 function rareteScore(t){
-  return t>=76?['LÉGENDAIRE','#F5C542','Top 10 %']:t>=62?['ÉPIQUE','#D4F04D','Top 30 %']:t>=46?['RARE','#4C6FFF','Top 65 %']:['COMMUN','#9AA7BD','Parcours classique'];
+  return t>=76?[__('LÉGENDAIRE'),'#F5C542',__("Top 10 %")]:t>=62?[__('ÉPIQUE'),'#D4F04D',__("Top 30 %")]:t>=46?[__('RARE'),'#4C6FFF',__("Top 65 %")]:[__('COMMUN'),'#9AA7BD',__("Parcours classique")];
 }
 function lireHof(){ try{ const v=JSON.parse(localStorage.getItem(HOF_KEY)||'[]'); return Array.isArray(v)?v:[]; }catch(err){ return []; } }
 function enregistrerCarriere(){
@@ -394,7 +394,7 @@ function assainir(s){
   const f=FRANCHISES.find(x=>s.franchise&&x.id===s.franchise.id);
   if(s.franchise&&!f) return false;
   if(f) s.franchise=f;
-  s.nom=String(s.nom||'JOUEUR').replace(/[<>&"'`]/g,'').slice(0,24)||'JOUEUR';
+  s.nom=String(s.nom||__('JOUEUR')).replace(/[<>&"'`]/g,'').slice(0,24)||__('JOUEUR');
   if(!POSITIONS[s.poste]) s.poste='Ailier';
   if(s.pays!==undefined&&!PAYS.some(p=>p[0]===s.pays)) s.pays='Autre';
   if(s.gabarit!==undefined&&!GABARITS[s.gabarit]) s.gabarit='Équilibré';

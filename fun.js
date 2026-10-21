@@ -10,9 +10,9 @@ function genererTableau(m){
   let na, nb, ca, cb;
   if(m.coupe){
     const pays=etat.pays&&etat.pays!=='Autre'?etat.pays:null;
-    na=pays?abrev(pays):'SEL';
+    na=pays&&CODE3[pays]?CODE3[pays]:'SEL';
     const adv=pick(Object.keys(CONTINENTS).filter(p=>p!==pays));
-    nb=abrev(adv); ca='#4C6FFF'; cb='#E5484D';
+    nb=CODE3[adv]||abrev(adv); ca='#4C6FFF'; cb='#E5484D';
   } else {
     let opp=null;
     const rv=m.rivalId?rivaux().find(r=>r.id===m.rivalId):null;
@@ -39,26 +39,26 @@ function scoreApres(tab,reussi){
 }
 
 /* ---------- Saison sportive (bilan, classement, playoffs) ---------- */
-const STADES=['Non qualifié','Éliminé au premier tour','Éliminé en demi-finales','Éliminé en finale de conférence','Finaliste','Champion'];
+const STADES=[__("Non qualifié"),__("Éliminé au premier tour"),__("Éliminé en demi-finales"),__("Éliminé en finale de conférence"),__('Finaliste'),__('Champion')];
 function genererSaisonRegliere(reussis,total,moyenne){
   const force=clamp(-0.02+etat.meta.coteEquipe/300+etat.meta.alchimieEquipe/700+(total?reussis/total:0.5)*0.30+(moyenne-55)/200+(Math.random()-0.5)*0.12,0.15,0.90);
   const v=clamp(Math.round(82*force),12,72);
   const rang=clamp(1+Math.round((0.78-force)*22),1,15);
   return {v,d:82-v,rang};
 }
-function texteRang(r){ return r===1?'1er':r+'e'; }
+function texteRang(r){ if(LANG==='en'){ const s=['th','st','nd','rd'], v=r%100; return r+(s[(v-20)%10]||s[v]||s[0]); } return r===1?'1er':r+'e'; }
 
 /* ---------- Actualités (presse, fans, rival) ---------- */
 const ACTUS={
-  presse_ok:["{n} TUE LE MATCH","{n} : « Le sang-froid d'un vétéran »","La nuit de {n}","{ville} tient son homme","{n} répond présent quand ça compte"],
-  presse_ko:["{n} sèche dans le money time","{n} a raté son rendez-vous","Nuit blanche pour {n}","Le tir de la peur pour {n}","{ville} doit-elle s'inquiéter ?"],
-  fans_ok:["« MVP ! MVP ! » scande la salle","Les fans de {ville} chantent ton nom","Le nom de {n} explose sur les réseaux","Standing ovation à {ville}"],
-  fans_ko:["Quelques sifflets dans la salle","Les fans veulent une revanche","Silence dans les gradins","Les supporters restent derrière toi malgré tout"],
-  rival_ok:["{r} : « On se retrouvera. »","{r} te serre la main sans un mot","{r} minimise sa défaite en conférence de presse"],
-  rival_ko:["{r} : « Trop facile ce soir. »","{r} savoure sur les réseaux","{r} te fait signe vers le banc"]
+  presse_ok:[__("{n} TUE LE MATCH"),__("{n} : « Le sang-froid d'un vétéran »"),__("La nuit de {n}"),__("{ville} tient son homme"),__("{n} répond présent quand ça compte")],
+  presse_ko:[__("{n} sèche dans le money time"),__("{n} a raté son rendez-vous"),__("Nuit blanche pour {n}"),__("Le tir de la peur pour {n}"),__("{ville} doit-elle s'inquiéter ?")],
+  fans_ok:[__("« MVP ! MVP ! » scande la salle"),__("Les fans de {ville} chantent ton nom"),__("Le nom de {n} explose sur les réseaux"),__("Standing ovation à {ville}")],
+  fans_ko:[__("Quelques sifflets dans la salle"),__("Les fans veulent une revanche"),__("Silence dans les gradins"),__("Les supporters restent derrière toi malgré tout")],
+  rival_ok:[__("{r} : « On se retrouvera. »"),__("{r} te serre la main sans un mot"),__("{r} minimise sa défaite en conférence de presse")],
+  rival_ko:[__("{r} : « Trop facile ce soir. »"),__("{r} savoure sur les réseaux"),__("{r} te fait signe vers le banc")]
 };
 function genererActus(entree,rv){
-  const n=etat.nom||'Le joueur', ville=etat.franchise.ville, ok=entree.reussi;
+  const n=etat.nom||__("Le joueur"), ville=etat.franchise.ville, ok=entree.reussi;
   const sub=t=>t.replace(/\{n\}/g,n).replace(/\{ville\}/g,ville).replace(/\{r\}/g,rv?rv.court:'');
   const res=[{src:'PRESSE',texte:sub(pick(ok?ACTUS.presse_ok:ACTUS.presse_ko))}];
   if(rv) res.push({src:'RIVAL',texte:sub(pick(ok?ACTUS.rival_ok:ACTUS.rival_ko))});
@@ -100,20 +100,30 @@ const Son={
 };
 function vibrer(p){ try{ if(navigator.vibrate) navigator.vibrate(p); }catch(e){} }
 function iconeSon(){ return Son.actif
-  ?'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4h4l6 4V6L7 10zM17 9a4 4 0 010 6"/></svg>'
-  :'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4h4l6 4V6L7 10zM17 9l5 6M22 9l-5 6"/></svg>'; }
+  ?__("<svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 10v4h4l6 4V6L7 10zM17 9a4 4 0 010 6\"/></svg>")
+  :__("<svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 10v4h4l6 4V6L7 10zM17 9l5 6M22 9l-5 6\"/></svg>"); }
+function monterBoutonLangue(){
+  if(document.getElementById('btn-langue')) return;
+  const b=document.createElement('button');
+  b.id='btn-langue'; b.type='button';
+  b.textContent=LANG==='fr'?'EN':'FR';
+  b.setAttribute('aria-label',LANG==='fr'?__("Switch to English"):__("Passer en français"));
+  b.title=LANG==='fr'?'English':'Français';
+  b.onclick=()=>changerLangue();
+  document.body.appendChild(b);
+}
 function monterBoutonSon(){
   if(document.getElementById('btn-son')) return;
   Son.init();
   const b=document.createElement('button');
-  b.id='btn-son'; b.type='button'; b.setAttribute('aria-label','Activer ou couper le son');
+  b.id='btn-son'; b.type='button'; b.setAttribute('aria-label',__('Activer ou couper le son'));
   b.innerHTML=iconeSon();
   b.onclick=()=>{ Son.basculer(); b.innerHTML=iconeSon(); Son.clic(); };
   document.body.appendChild(b);
 }
 
 /* ---------- Jauge de geste ---------- */
-const GESTES={scoring:['TIRER','SWISH !','LE TIR SORT'],defense:['CONTRER','STOP !','ILS PASSENT'],playmaking:['PASSER','QUELLE PASSE !','PASSE PERDUE'],athletisme:['ATTAQUER','EXPLOSIF !','CONTRÉ !'],basketIQ:['DÉCIDER','BIEN LU !','MAUVAIS CHOIX']};
+const GESTES={scoring:[__('TIRER'),__("SWISH !"),__("LE TIR SORT")],defense:[__('CONTRER'),__("STOP !"),__("ILS PASSENT")],playmaking:[__('PASSER'),__("QUELLE PASSE !"),__("PASSE PERDUE")],athletisme:[__('ATTAQUER'),__("EXPLOSIF !"),__("CONTRÉ !")],basketIQ:[__('DÉCIDER'),__("BIEN LU !"),__("MAUVAIS CHOIX")]};
 let jaugeRaf=0;
 function demarrerJauge(statCle,surArret){
   const zone=document.getElementById('jauge-zone'), curseur=document.getElementById('jauge-curseur'), bouton=document.getElementById('btn-geste');
@@ -149,7 +159,7 @@ function demarrerJauge(statCle,surArret){
 function animerCompteurs(){
   document.querySelectorAll('.cnt').forEach(el=>{
     const cible=Number(el.dataset.v)||0, dur=700, debut=performance.now();
-    const calme=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const calme=window.matchMedia&&window.matchMedia(__("(prefers-reduced-motion: reduce)")).matches;
     if(calme){ el.textContent=String(cible); return; }
     const tick=now=>{ const p=Math.min(1,(now-debut)/dur); el.textContent=String(Math.round(cible*(1-Math.pow(1-p,3)))); if(p<1) requestAnimationFrame(tick); };
     requestAnimationFrame(tick);
@@ -159,25 +169,25 @@ function animerCompteurs(){
 /* ---------- Défis du jour et badges ---------- */
 const DEFIS_KEY='five-ways-defis-v1', BADGES_KEY='five-ways-badges-v1';
 const DEFIS_FACILES=[
-  {id:'m3',nom:'Réussis 3 moments de match',evt:'match_ok',cible:3},
-  {id:'s2',nom:'Joue 2 saisons',evt:'saison',cible:2},
-  {id:'p3',nom:'Réussis 3 gestes parfaits',evt:'parfait',cible:3}
+  {id:'m3',nom:__("Réussis 3 moments de match"),evt:'match_ok',cible:3},
+  {id:'s2',nom:__("Joue 2 saisons"),evt:'saison',cible:2},
+  {id:'p3',nom:__("Réussis 3 gestes parfaits"),evt:'parfait',cible:3}
 ];
 const DEFIS_MOYENS=[
-  {id:'m6',nom:'Réussis 6 moments de match',evt:'match_ok',cible:6},
-  {id:'s4',nom:'Joue 4 saisons',evt:'saison',cible:4},
-  {id:'c1',nom:'Réussis un moment décisif',evt:'clutch',cible:1},
-  {id:'d1',nom:'Bats un rival en duel',evt:'duel_ok',cible:1}
+  {id:'m6',nom:__("Réussis 6 moments de match"),evt:'match_ok',cible:6},
+  {id:'s4',nom:__("Joue 4 saisons"),evt:'saison',cible:4},
+  {id:'c1',nom:__("Réussis un moment décisif"),evt:'clutch',cible:1},
+  {id:'d1',nom:__("Bats un rival en duel"),evt:'duel_ok',cible:1}
 ];
 const DEFIS_DIFFICILES=[
-  {id:'med',nom:'Remporte une médaille',evt:'medaille',cible:1},
-  {id:'tit',nom:'Gagne un titre',evt:'titre',cible:1},
-  {id:'all',nom:'Sois sélectionné All-Star',evt:'allstar',cible:1}
+  {id:'med',nom:__("Remporte une médaille"),evt:'medaille',cible:1},
+  {id:'tit',nom:__("Gagne un titre"),evt:'titre',cible:1},
+  {id:'all',nom:__("Sois sélectionné All-Star"),evt:'allstar',cible:1}
 ];
 const BADGES=[
-  {id:'titre',nom:'Premier titre'},{id:'allstar',nom:'All-Star'},{id:'mvp',nom:'MVP'},
-  {id:'medaille',nom:'Médaillé'},{id:'or',nom:'Médaille d\'or'},{id:'parfait20',nom:'Geste d\'or'},
-  {id:'veteran',nom:'Vétéran'},{id:'legende',nom:'Légende'},{id:'duelliste',nom:'Roi du duel'}
+  {id:'titre',nom:__("Premier titre")},{id:'allstar',nom:'All-Star'},{id:'mvp',nom:'MVP'},
+  {id:'medaille',nom:__('Médaillé')},{id:'or',nom:__("Médaille d'or")},{id:'parfait20',nom:__("Geste d'or")},
+  {id:'veteran',nom:__('Vétéran')},{id:'legende',nom:__('Légende')},{id:'duelliste',nom:__("Roi du duel")}
 ];
 function jourCle(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function graine(s){ let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
@@ -215,7 +225,7 @@ function debloquer(b,id){
   if(b.ids.includes(id)) return;
   b.ids.push(id);
   const def=BADGES.find(x=>x.id===id);
-  if(def) toast('Badge débloqué : '+def.nom,'#F5C542');
+  if(def) toast(__("Badge débloqué : ")+def.nom,'#F5C542');
 }
 function suivre(evt,n,extra){
   try{
@@ -226,7 +236,7 @@ function suivre(evt,n,extra){
       for(const df of defisDuJour(d.jour)){
         if(df.evt!==evt||d.faits.includes(df.id)) continue;
         d.prog[df.id]=(d.prog[df.id]||0)+n;
-        if(d.prog[df.id]>=df.cible){ d.faits.push(df.id); toast('Défi accompli : '+df.nom,'#4ADE9A'); }
+        if(d.prog[df.id]>=df.cible){ d.faits.push(df.id); toast(__("Défi accompli : ")+df.nom,'#4ADE9A'); }
       }
       ecrireJson(DEFIS_KEY,d);
     }
@@ -249,5 +259,5 @@ function defisHtml(){
     return `<div class="defi ${fait?'fait':''}"><span class="defi-nom">${escapeHtml(df.nom)}</span><span class="defi-v">${fait?'✓':v+'/'+df.cible}</span><i><b style="width:${Math.round(v/df.cible*100)}%"></b></i></div>`;
   }).join('');
   const chips=BADGES.map(x=>`<span class="badge-m ${b.ids.includes(x.id)?'on':''}">${escapeHtml(x.nom)}</span>`).join('');
-  return `<div class="bloc-defis"><p class="byline" style="margin-bottom:8px">DÉFIS DU JOUR</p>${lignes}<p class="byline" style="margin:12px 0 8px">BADGES · ${b.ids.length}/${BADGES.length}</p><div class="chips-badges">${chips}</div></div>`;
+  return __t("<div class=\"bloc-defis\"><p class=\"byline\" style=\"margin-bottom:8px\">DÉFIS DU JOUR</p>{#0}<p class=\"byline\" style=\"margin:12px 0 8px\">BADGES · {#1}/{#2}</p><div class=\"chips-badges\">{#3}</div></div>",[lignes,b.ids.length,BADGES.length,chips]);
 }
