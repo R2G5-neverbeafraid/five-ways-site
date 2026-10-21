@@ -271,6 +271,7 @@ function appliquerChoix(choix){
     if(rv&&choix.effets&&choix.effets.rivalite) rv.niveau=clamp(rv.niveau+choix.effets.rivalite,1,5);
   }
   if(choix.action==='quitter'){ const f=franchiseParId(etat.tradeVers); if(f&&f.id!==etat.franchise.id) changerFranchise(f,pick(TAGS_EQUIPE)); }
+  if(choix.action==='refus_selection'&&etat.scenarioActuel) etat.scenarioActuel.coupe=null;
   if(choix.action==='fac_rester'){ etat.fac.numero++; etat.phase='jeu'; genererTour(); sauvegarder(); return; }
   if(['draft','gleague','europe','prepa'].includes(choix.action)){
     if(choix.action!=='draft'){ etat.age++; etat.coteDraftBase+=choix.action==='europe'?1:choix.action==='prepa'?1:0; }

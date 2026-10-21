@@ -690,6 +690,10 @@ const JEUX_OLYMPIQUES=__("Jeux Olympiques de basket");
 function selectionne(e){ return (e.saison*37+e.age*11)%100 < 45+e.meta.reputation*0.5; }
 function aPays(e){ return !!(e.pays&&e.pays!=='Autre'&&CONTINENTS[e.pays]); }
 function nomPays(e){ return aPays(e)?__(e.pays):__('ta sélection'); }
+/* Calendrier des compétitions internationales (saisons pro) : JO tous les 4 ans dès la saison 10, Coupe du Monde tous les 5 ans dès la saison 11, coupe continentale tous les 3 ans dès la saison 9. Priorité : JO, puis Coupe du Monde, puis coupe continentale. */
+const estJO=s=>s>=10&&(s-10)%4===0;
+const estMonde=s=>s>=11&&(s-11)%5===0&&!estJO(s);
+const estCAN=s=>s>=9&&(s-9)%3===0&&!estJO(s)&&!estMonde(s);
 function coupeContinent(e){ const c=CONTINENTS[e.pays]; return c?COUPES_CONTINENT[c]:null; }
 function pointFaible(e){
   const L={scoring:__("ton scoring"),playmaking:__("ton playmaking"),defense:__("ta défense"),athletisme:__("ton athlétisme"),basketIQ:__("ton basket IQ")};
@@ -971,7 +975,7 @@ const SCENARIOS=[
     c('Vie perso',__("Partir en voyage pour recharger les batteries"),{risqueBlessure:-6,alchimieEquipe:2}),
     c('Risque / Legacy',__("Défier un rival lors d'un camp d'été public"),{reputation:5,risqueBlessure:3})
   ]},
-  {id:'coupe_continent',generique:false,cond:e=>e.saison>=3&&e.saison%2===1&&!!coupeContinent(e)&&selectionne(e),
+  {id:'coupe_continent',generique:false,cond:e=>estCAN(e.saison)&&!!coupeContinent(e)&&selectionne(e),
    question:__("Une coupe continentale approche : comment la prépares-tu ?"),
    coupe:e=>({nom:coupeContinent(e),type:'continent'}),
    contexte:e=>__t("La {#0} réunit les meilleures sélections de la région. {#1} compte sur toi, mais ta franchise aussi.",[coupeContinent(e),aPays(e)?nomPays(e):__('Ta sélection')]),
@@ -979,10 +983,10 @@ const SCENARIOS=[
     c('Performance',__t("Rejoindre le stage de préparation et travailler les systèmes de {#0}",[nomPays(e)]),{playmaking:2,basketIQ:2,risqueBlessure:2}),
     c('Carrière / Contrat',__("Obtenir de ta franchise une libération sans conditions pour toute la compétition"),{coteEquipe:2,reputation:2}),
     c('Image / Marque',__t("Porter le brassard de capitaine dans les médias avant le tournoi",[]),{reputation:5}),
-    c('Vie perso',__("Passer quelques jours en famille au pays avant de rejoindre le groupe"),{alchimieEquipe:3,risqueBlessure:-4}),
+    {...c('Vie perso',__("Refuser la sélection nationale et te reposer cet été"),{alchimieEquipe:2,risqueBlessure:-6,reputation:-3}),action:'refus_selection'},
     c('Risque / Legacy',__("Jouer toute la compétition à fond malgré la fatigue de la saison"),{reputation:4,scoring:2,risqueBlessure:5})
   ]},
-  {id:'coupe_monde',generique:false,cond:e=>e.saison>=6&&e.saison%4===2,
+  {id:'coupe_monde',generique:false,cond:e=>estMonde(e.saison),
    question:__("La Coupe du Monde de la FIB arrive : quel joueur veux-tu y être ?"),
    coupe:e=>({nom:COUPE_MONDE,type:'monde'}),
    contexte:e=>__t("La FIB (Fédération internationale de basket) organise la {#0}. Le monde entier regarde, et {#1} veut aller loin.",[COUPE_MONDE,nomPays(e)]),
@@ -990,18 +994,18 @@ const SCENARIOS=[
     c('Performance',__("Faire de la préparation athlétique ta priorité absolue"),{athletisme:3,defense:1,risqueBlessure:2}),
     c('Carrière / Contrat',__("Utiliser la visibilité mondiale pour relancer ton contrat"),{coteEquipe:3,reputation:2}),
     c('Image / Marque',__t("Signer un contrat de marque lié à la Coupe du Monde",[]),{reputation:6,alchimieEquipe:-1}),
-    c('Vie perso',__("Voyager avec ta famille et profiter de l'événement"),{alchimieEquipe:3,risqueBlessure:-5}),
+    {...c('Vie perso',__("Refuser la sélection nationale et te reposer cet été"),{alchimieEquipe:2,risqueBlessure:-6,reputation:-3}),action:'refus_selection'},
     c('Risque / Legacy',__("Annoncer que tu veux le titre mondial et le MVP du tournoi"),{reputation:6,scoring:2,risqueBlessure:4})
   ]},
-  {id:'jeux_olympiques',generique:false,cond:e=>e.saison>=4&&e.saison%4===0,
+  {id:'jeux_olympiques',generique:false,cond:e=>estJO(e.saison),
    question:__("Les Jeux Olympiques approchent : comment les abordes-tu ?"),
    coupe:e=>({nom:JEUX_OLYMPIQUES,type:'jo'}),
-   contexte:e=>__t("Tous les quatre ans, deux ans après la Coupe du Monde de la FIB, les Jeux Olympiques réunissent les meilleures sélections de la planète. {#0} rêve d'une médaille, et tu es au cœur de ce rêve.",[aPays(e)?nomPays(e):__('Ta sélection')]),
+   contexte:e=>__t("Tous les quatre ans, les Jeux Olympiques réunissent les meilleures sélections de la planète. {#0} rêve d'une médaille, et tu es au cœur de ce rêve.",[aPays(e)?nomPays(e):__('Ta sélection')]),
    choix:e=>[
     c('Performance',__("Suivre un programme de préparation spécial pour être à ton pic le jour J"),{athletisme:2,scoring:1,basketIQ:1,risqueBlessure:2}),
     c('Carrière / Contrat',__("Négocier une clause « Jeux » avec ta franchise : libération et prime à la clé"),{coteEquipe:2,reputation:3}),
     c('Image / Marque',__("Devenir le visage de ta délégation dans les médias"),{reputation:6,alchimieEquipe:-1}),
-    c('Vie perso',__("Emmener ta famille au village olympique et profiter de l'instant"),{alchimieEquipe:3,risqueBlessure:-5}),
+    {...c('Vie perso',__("Refuser la sélection nationale et te reposer cet été"),{alchimieEquipe:2,risqueBlessure:-6,reputation:-3}),action:'refus_selection'},
     c('Risque / Legacy',__("Annoncer que tu vises l'or, rien d'autre"),{reputation:7,scoring:2,risqueBlessure:4})
   ]},
   {id:'sponsor',generique:false,cond:e=>e.saison>=2&&e.meta.reputation>=60&&e.age<=34,
