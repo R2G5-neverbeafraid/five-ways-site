@@ -7,7 +7,7 @@ function alea(n){ return Math.floor(Math.random()*n); }
 function genererTableau(m){
   const f=etat.franchise;
   const dom=Math.random()<0.5;
-  let na, nb, ca, cb, fa=null, fb=null;
+  let na, nb, ca, cb, fa=null, fb=null, oppId=null;
   if(m.coupe){
     const pays=etat.pays&&etat.pays!=='Autre'?etat.pays:null;
     na=pays&&CODE3[pays]?CODE3[pays]:'SEL';
@@ -24,9 +24,9 @@ function genererTableau(m){
     let opp=null;
     const rv=m.rivalId?rivaux().find(r=>r.id===m.rivalId):null;
     if(rv){ opp=rv.type==='equipe'?franchiseParId(String(rv.id).slice(3)):FRANCHISES.find(x=>x.ville+' '+x.nom===rv.equipe); }
-    if(!opp||opp.id===f.id) opp=pick(FRANCHISES.filter(x=>x.id!==f.id));
+    if(!opp||opp.id===f.id) opp=pick(toutesEquipes().filter(x=>x.id!==f.id));
     const col=dom?couleursMatch(f,opp):couleursMatch(opp,f);
-    na=abrev(f.id); nb=abrev(opp.id);
+    na=f.abr||abrev(f.id); nb=opp.abr||abrev(opp.id); oppId=opp.id;
     ca=dom?col.dom:col.ext; cb=dom?col.ext:col.dom;
   }
   let q, t, diff;
@@ -36,7 +36,7 @@ function genererTableau(m){
   else if(id==='faute_rapide'){ q=1; t='7:'+String(10+alea(40)); diff=pick([-2,0,1]); }
   else { q=pick([2,3,4,4,4]); t=(q===4?pick(['0','1','1','2']):String(2+alea(8)))+':'+String(10+alea(49)); diff=pick([-3,-2,-1,0,0,1,2]); }
   const base=62+alea(34);
-  const res={na,nb,ca,cb,q,t,a:base+diff,b:base,dom}; if(fa) res.fa=fa; if(fb) res.fb=fb; if(m.coupe) res.neutre=true; return res;
+  const res={na,nb,ca,cb,q,t,a:base+diff,b:base,dom}; if(oppId) res.opp=oppId; if(fa) res.fa=fa; if(fb) res.fb=fb; if(m.coupe) res.neutre=true; return res;
 }
 function scoreApres(tab,reussi){
   let a=tab.a, b=tab.b;
@@ -46,6 +46,9 @@ function scoreApres(tab,reussi){
 }
 
 /* ---------- Saison sportive (bilan, classement, playoffs) ---------- */
+const STADES_FAC=[__("Non qualifié"),__("Éliminé au premier tour du Tournoi"),__("Éliminé en Sweet 16"),__("Éliminé en Final Four"),__("Finaliste national"),__("Champion universitaire")];
+const STADES_LYC=[__("Non qualifié"),__("Éliminé au premier tour"),__("Éliminé en quarts de finale"),__("Éliminé en demi-finales d'État"),__("Finaliste d'État"),__("Champion d'État")];
+function stadesSaison(){ return estLycee()?STADES_LYC:estFac()?STADES_FAC:STADES; }
 const STADES=[__("Non qualifié"),__("Éliminé au premier tour"),__("Éliminé en demi-finales"),__("Éliminé en finale de conférence"),__('Finaliste'),__('Champion')];
 function genererSaisonRegliere(reussis,total,moyenne){
   const force=clamp(-0.02+etat.meta.coteEquipe/300+etat.meta.alchimieEquipe/700+(total?reussis/total:0.5)*0.30+(moyenne-55)/200+(Math.random()-0.5)*0.12,0.15,0.90);
@@ -149,11 +152,19 @@ function difficulteJauge(m){
   if(momentDecisif(m)) return {zone:0.85,vitesse:1.05,note:__t("Moment décisif : zone verte −{#0} %, curseur +{#1} %.",[15,5])};
   return {zone:1,vitesse:1,note:''};
 }
+/* Largeur de la zone verte (fraction de la jauge) : plus grande avec une bonne stat, réduite dans les moments importants. */
+function largeurJauge(statCle,diff){ return (0.28+(etat.stats[statCle]||50)/100*0.14)*((diff&&diff.zone)||1); }
+/* Règle : appuyer hors de la zone verte = l'action est perdue. Dans la zone : bonus (+8 %, +14 % au centre), mais un mauvais choix reste un mauvais choix. */
+function evaluerGeste(d,largeur){
+  if(d<=largeur*0.18) return {label:'parfait',bonus:0.14};
+  if(d<=largeur/2) return {label:'bon',bonus:0.08};
+  return {label:'rate',bonus:0};
+}
 function demarrerJauge(statCle,surArret,diff){
   diff=diff||{zone:1,vitesse:1};
   const zone=document.getElementById('jauge-zone'), curseur=document.getElementById('jauge-curseur'), bouton=document.getElementById('btn-geste');
   if(!zone||!curseur||!bouton) return;
-  const largeur=(0.17+(etat.stats[statCle]||50)/100*0.10)*diff.zone;
+  const largeur=largeurJauge(statCle,diff);
   const centre=0.2+Math.random()*0.6;
   zone.style.left=((centre-largeur/2)*100)+'%'; zone.style.width=(largeur*100)+'%';
   const debut=performance.now(), periode=1500/diff.vitesse;
@@ -168,13 +179,9 @@ function demarrerJauge(statCle,surArret,diff){
   const arreter=auto=>{
     if(fini) return; fini=true; cancelAnimationFrame(jaugeRaf);
     const d=Math.abs(pos-centre);
-    let label, bonus;
-    if(auto){ label='rate'; bonus=-0.06; }
-    else if(d<=largeur/2){ label='parfait'; bonus=0.10; }
-    else if(d<=largeur*0.95){ label='bon'; bonus=0.04; }
-    else { label='rate'; bonus=-0.05; }
+    const g=auto?{label:'rate',bonus:0}:evaluerGeste(d,largeur);
     bouton.disabled=true;
-    surArret({label,bonus});
+    surArret(g);
   };
   bouton.onclick=()=>arreter(false);
   jaugeRaf=requestAnimationFrame(tick);
