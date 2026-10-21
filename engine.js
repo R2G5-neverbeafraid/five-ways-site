@@ -232,10 +232,26 @@ function resoudreMatch(opt){
   etat.phase='resultat';
   sauvegarder();
 }
+const HOF_KEY='five-ways-hof-v1';
+function rareteScore(t){
+  return t>=56?['LÉGENDAIRE','#F5C542','Top 5 %']:t>=53?['ÉPIQUE','#D4F04D','Top 25 %']:t>=46?['RARE','#4C6FFF','Top 75 %']:['COMMUN','#9AA7BD','Parcours classique'];
+}
+function lireHof(){ try{ const v=JSON.parse(localStorage.getItem(HOF_KEY)||'[]'); return Array.isArray(v)?v:[]; }catch(err){ return []; } }
+function enregistrerCarriere(){
+  if(etat.hofEnregistre) return;
+  etat.hofEnregistre=true;
+  try{
+    const sc=calculerScore();
+    const liste=lireHof();
+    liste.push({nom:etat.nom,numero:etat.numero,poste:etat.poste,score:sc.total,saisons:etat.saison-1,titres:etat.distinctions.titres,equipe:etat.franchise.ville+' '+etat.franchise.nom});
+    liste.sort((a,b)=>b.score-a.score);
+    localStorage.setItem(HOF_KEY,JSON.stringify(liste.slice(0,5)));
+  }catch(err){}
+}
 function continuerApresResultat(){
   etat.age++; etat.saison++;
   const chanceRetraite = etat.age>=30 ? (etat.age-30)*0.09 : 0;
-  if(etat.age>=36 || Math.random()<chanceRetraite){ etat.phase='retraite'; }
+  if(etat.age>=36 || Math.random()<chanceRetraite){ etat.phase='retraite'; enregistrerCarriere(); }
   else{ etat.phase='jeu'; genererTour(); }
   sauvegarder();
 }
@@ -271,5 +287,5 @@ function charger(){
     if(brut){ const s=JSON.parse(brut); etat=sauvegardeValide(s)?s:null; if(!etat) localStorage.removeItem(SAVE_KEY); }
   }catch(e){ etat=null; }
 }
-function reinitialiser(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} etat=null; render(); }
+function reinitialiser(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} etat=null; accueilVu=false; render(); }
 

@@ -101,6 +101,7 @@ function renderAccueil(){
     <div style="font-family:'Oswald','Impact',sans-serif;font-weight:700;text-transform:uppercase;line-height:.95;font-size:64px;letter-spacing:.01em">FIVE<br><span style="color:var(--accent)">WAYS</span></div>
     <p style="margin:0;font-size:12.5px;font-weight:600;letter-spacing:.14em;color:var(--text-muted)">5 CHOIX. 1 CARRIÈRE.</p>
     <button id="btn-jouer" class="bouton" style="width:100%;margin-top:14px">Jouer</button>
+    ${(()=>{const h=lireHof();return h.length?`<div style="width:100%;text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px"><p class="byline" style="margin-bottom:8px">HALL OF FAME · CET APPAREIL</p>${h.map((c,i)=>`<div style="display:flex;justify-content:space-between;font-size:13.5px;padding:3px 0"><span>${i+1}. #${c.numero!==undefined?c.numero:'—'} ${escapeHtml(c.nom)}</span><span style="color:${rareteScore(c.score)[1]};font-weight:700">${c.score}/96</span></div>`).join('')}</div>`:'';})()}
     ${signature25()}
   </div>`;
 }
@@ -255,7 +256,7 @@ function renderRetraite(){
     <p class="logo">FIN DE CARRIÈRE</p>
     ${(()=>{
       const t=sc.total;
-      const R=t>=56?['LÉGENDAIRE','#F5C542','Top 5 %']:t>=53?['ÉPIQUE','#D4F04D','Top 25 %']:t>=46?['RARE','#4C6FFF','Top 75 %']:['COMMUN','#9AA7BD','Parcours classique'];
+      const R=rareteScore(t);
       const cpt=etat.axesCompte||{}; const tot=Object.values(cpt).reduce((a,b)=>a+b,0)||1;
       const lignes=Object.keys(COULEURS_AXES).map(a=>`<div class="profil-l"><span style="display:flex;align-items:center;gap:6px"><span style="color:${COULEURS_AXES[a]};display:flex">${ICONES_AXES[a]}</span>${a.split(' / ')[0]}</span><i><b style="width:${Math.round((cpt[a]||0)/tot*100)}%;background:${COULEURS_AXES[a]}"></b></i></div>`).join('');
       return `<div class="carte-fin" style="--rar:${R[1]}"><p class="rar-nom">${R[0]}</p><p class="rar-nom-joueur">${etat.numero!==undefined?"#"+etat.numero+" ":""}${escapeHtml(etat.nom)}</p><p class="recap">${etat.poste} — ${etat.saison-1} saisons — ${etat.franchise.ville} ${etat.franchise.nom}</p><div class="score-affiche"><span class="score-valeur" style="color:${R[1]}">${t}</span><span class="score-max">/ 96</span></div><p class="rar-pct">${R[2]}</p><div class="profil">${lignes}</div>${signature25()}</div>`;
