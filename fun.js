@@ -13,7 +13,7 @@ function genererTableau(m){
     na=pays&&CODE3[pays]?CODE3[pays]:'SEL';
     // Adversaires cohérents : coupe continentale = pays du même continent ; Coupe du Monde / JO = tous les pays.
     // Choix déterministe (saison + manche) pour ne pas retrouver le même adversaire dans la même compétition.
-    const rangC=['coupe_poule','coupe_demi','coupe_finale'].indexOf(m.id);
+    const rangC=m.rangC!==undefined?m.rangC:['coupe_poule','coupe_demi','coupe_finale'].indexOf(m.id);
     const typeC=etat.scenarioActuel&&etat.scenarioActuel.coupe?etat.scenarioActuel.coupe.type:'monde';
     let cand=Object.keys(CONTINENTS).filter(p=>p!==pays);
     if(typeC==='continent'&&pays) cand=cand.filter(p=>CONTINENTS[p]===CONTINENTS[pays]);

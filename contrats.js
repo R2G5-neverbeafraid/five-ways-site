@@ -188,7 +188,7 @@ function suiteHorsSaison(){
   sauvegarder();
 }
 function demarrerMatchs(){
-  etat.matchsTotal=(etat.scenarioActuel&&etat.scenarioActuel.coupe?3:2+(Math.random()<0.34?1:0))+(rivaux().length?1:0);
+  etat.matchsTotal=(etat.scenarioActuel&&etat.scenarioActuel.coupe?1:2+(Math.random()<0.34?1:0))+(rivaux().length?1:0);
   etat.matchsResultats=[];
   etat.bonusSaison=0;
   etat.matchActuel=genererMatch();

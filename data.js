@@ -615,7 +615,7 @@ const MATCH_SITUATIONS=[
     o(__("Faire passer un message à tes coéquipiers"),'playmaking',0.0,0.05,{alchimieEquipe:4},{alchimieEquipe:-1},__("Tes coéquipiers te soutiennent et se serrent les coudes."),__("Le message est mal compris et crée des tensions.")),
     o(__("Répondre aux journalistes à la mi-temps"),'basketIQ',-0.1,0.06,{reputation:4},{reputation:-3,alchimieEquipe:-2},__("Ta réponse est applaudie par les supporters."),__("Ta phrase est reprise hors contexte par les médias."))
   ]},
-  {id:'coupe_poule',titre:__("Match de poule serré"),contexte:__("{coupe}. Dernier match de la phase de groupes : une défaite et {pays} peut être éliminé."),choix:[
+  {id:'coupe_poule',titre:__("Match de poule serré"),contexte:__("{coupe}. Phase de groupes : il faut gagner deux matchs sur trois pour passer en quarts de finale."),choix:[
     o(__("Imposer ton rythme dès l'entame"),'scoring',-0.05,0.08,{reputation:4},{reputation:-2},__("Tu ouvres le score et la sélection suit ton rythme."),__("Tu forces tes tirs et l'adversaire prend les devants.")),
     o(__("Fermer la raquette en défense"),'defense',0.0,0.08,{reputation:3,defense:1},{risqueBlessure:2},__("Ta défense étouffe l'adversaire sur toute la rencontre."),__("L'adversaire contourne la défense et marque en transition.")),
     o(__("Faire jouer le collectif de la sélection"),'playmaking',0.05,0.06,{alchimieEquipe:4},{alchimieEquipe:-2},__("Les systèmes fonctionnent et tout le monde score."),__("Le collectif n'a pas eu le temps de se roder.")),
@@ -636,6 +636,8 @@ const MATCH_SITUATIONS=[
     o(__("Demander un temps mort pour dessiner la dernière action"),'basketIQ',0.1,0.07,{basketIQ:1,alchimieEquipe:3},{reputation:-1},__("L'action dessinée fonctionne à la perfection."),__("L'adversaire a tout lu et ferme tous les passages.")),
     o(__("Forcer au cercle pour obtenir les lancers"),'athletisme',-0.05,0.09,{reputation:5},{risqueBlessure:4},__("Faute sifflée, deux lancers à la clé, tu les mets."),__("Pas de faute sifflée : le contre te prive du titre."))
   ]},
+  {id:'coupe_quart',titre:__('Quart de finale'),contexte:__("{coupe}. Quart de finale : une défaite et {pays} rentre à la maison."),choix:null},
+  {id:'coupe_bronze',titre:__("Match pour la médaille de bronze"),contexte:__("{coupe}. Match pour la troisième place : il reste une médaille de bronze à aller chercher."),choix:null},
   {id:'faute_rapide',titre:__("Deux fautes en trois minutes"),contexte:__("Ton adversaire direct te provoque, l'arbitre te siffle deux fautes très vite. Le coach hésite à te garder."),choix:[
     o(__("Rester sur le terrain en jouant sans faire de faute"),'defense',0.05,0.05,{defense:1,reputation:2},{reputation:-2},__("Tu défends propre et tu gardes ta place."),__("Troisième faute, retour sur le banc.")),
     o(__("Demander à sortir pour reprendre ton souffle"),'basketIQ',0.15,0.03,{basketIQ:1},{reputation:-1},__("Tu reviens plus lucide et ton équipe n'a pas souffert."),__("Ton équipe encaisse un 10-0 pendant ton absence.")),
@@ -1435,3 +1437,6 @@ SCENARIOS.push(
   ]}
 );
 Object.assign(SCENARIO_MATCHS,{lyc_prep:['rival','technique'],lyc_academie:['technique','exterieur'],lyc_bitume:['exterieur','rival'],lyc_fils:['rival','buzzer'],lyc_generique:['buzzer','lancers']});
+
+/* Quart de finale et match pour le bronze : mêmes choix que la demi-finale. */
+MATCH_SITUATIONS.forEach(s=>{ if((s.id==='coupe_quart'||s.id==='coupe_bronze')&&!s.choix) s.choix=MATCH_SITUATIONS.find(x=>x.id==='coupe_demi').choix; });

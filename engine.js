@@ -280,16 +280,44 @@ function appliquerChoix(choix){
   if(choix.action==='demande'){ etat.offres=genererOffresTrade(); etat.phase='trade'; sauvegarder(); return; }
   demarrerMatchs();
 }
-function genererMatchCoupe(rang){
-  const sa=etat.scenarioActuel.coupe, pays=nomPays(etat), id=['coupe_poule','coupe_demi','coupe_finale'][rang];
+/* Tournoi (Coupe, JO…) : 3 matchs de poule (2 victoires pour passer), puis quart, demi, finale.
+   Perdre un match à élimination directe termine la compétition ; perdre la demi-finale mène au match pour le bronze. */
+function coupeSuite(){
+  const r=(etat.matchsResultats||[]).filter(m=>m.stade);
+  const poule=r.filter(m=>m.stade==='poule'), pv=poule.filter(m=>m.reussi).length, pd=poule.length-pv;
+  if(pd>=2) return null;
+  if(pv<2) return 'poule';
+  const ko={}; r.filter(m=>m.stade!=='poule').forEach(m=>{ ko[m.stade]=m.reussi; });
+  if(!('quart' in ko)) return 'quart';
+  if(!ko.quart) return null;
+  if(!('demi' in ko)) return 'demi';
+  if(!ko.demi) return ('bronze' in ko)?null:'bronze';
+  if(!('finale' in ko)) return 'finale';
+  return null;
+}
+function coupeIssue(){
+  const r=(etat.matchsResultats||[]).filter(m=>m.stade);
+  const poule=r.filter(m=>m.stade==='poule'), pv=poule.filter(m=>m.reussi).length;
+  const ko={}; r.filter(m=>m.stade!=='poule').forEach(m=>{ ko[m.stade]=m.reussi; });
+  if(pv<2) return 'poule';
+  if(ko.quart===false) return 'quart';
+  if(ko.finale===true) return 'or';
+  if(ko.finale===false) return 'argent';
+  if(ko.bronze===true) return 'bronze';
+  if(ko.bronze===false) return 'quatrieme';
+  return 'poule';
+}
+function genererMatchCoupe(stade){
+  const sa=etat.scenarioActuel.coupe, pays=nomPays(etat), id={poule:'coupe_poule',quart:'coupe_quart',demi:'coupe_demi',bronze:'coupe_bronze',finale:'coupe_finale'}[stade];
   const s=MATCH_SITUATIONS.find(x=>x.id===id);
   const sub=t=>t.replace(/\{pays\}/g,pays).replace(/\{coupe\}/g,sa.nom);
-  return {id:s.id,titre:s.titre,contexte:sub(s.contexte),choix:melangerOrdre(s.choix.map(c=>({...c,texte:sub(c.texte),ok:sub(c.ok),ko:sub(c.ko)}))),coupe:true};
+  const rangC=etat.matchsResultats.filter(m=>m.stade).length;
+  return {id:s.id,titre:s.titre,contexte:sub(s.contexte),choix:melangerOrdre(s.choix.map(c=>({...c,texte:sub(c.texte),ok:sub(c.ok),ko:sub(c.ko)}))),coupe:true,stade,rangC};
 }
 function genererMatch(){ const m=genererMatchBase(); m.tableau=genererTableau(m); return m; }
 function genererMatchBase(){
   if(rivaux().length&&etat.matchsResultats&&etat.matchsResultats.length===etat.matchsTotal-1) return genererDuel();
-  if(etat.scenarioActuel&&etat.scenarioActuel.coupe&&etat.matchsResultats&&etat.matchsResultats.length<3) return genererMatchCoupe(etat.matchsResultats.length);
+  if(etat.scenarioActuel&&etat.scenarioActuel.coupe&&etat.matchsResultats){ const st=coupeSuite(); if(st) return genererMatchCoupe(st); }
   const recents=etat.situationsRecentes||[];
   const normales=MATCH_SITUATIONS.filter(s=>!s.id.startsWith('coupe_'));
   let dispo=normales.filter(s=>!recents.includes(s.id));
@@ -314,6 +342,7 @@ function resoudreMatch(opt,geste){
   const enjeu=rv?opt.enjeu*(1+0.1*rv.niveau):opt.enjeu;
   etat.bonusSaison+=reussi?enjeu:-enjeu/2;
   const entree={titre:etat.matchActuel.titre, texte:opt.texte, reussi, narration:reussi?opt.ok:opt.ko, stat:opt.stat, p:gesteRate?0:Math.round(p*100), geste:(geste&&geste.label)||null, tableau:etat.matchActuel.tableau||null};
+  if(etat.matchActuel.stade) entree.stade=etat.matchActuel.stade;
   if(rv){
     if(reussi) rv.bilan.v++; else rv.bilan.d++;
     if((rv.bilan.v+rv.bilan.d)%2===0&&rv.niveau<5) rv.niveau++;
@@ -331,6 +360,10 @@ function resoudreMatch(opt,geste){
   }
   if(enPlayoffs) return resoudrePlayoffs(entree,reussi);
   etat.matchsResultats.push(entree);
+  if(etat.scenarioActuel&&etat.scenarioActuel.coupe){
+    const nCup=etat.matchsResultats.filter(m=>m.stade).length, duel=rivaux().length?1:0;
+    etat.matchsTotal=coupeSuite()?etat.matchsResultats.length+1+duel:nCup+duel;
+  }
   if(etat.matchsResultats.length<etat.matchsTotal){
     etat.matchActuel=genererMatch();
     sauvegarder();
@@ -368,11 +401,14 @@ function terminerSaisonRegulier(entree){
   }
   let medaille=null;
   if(etat.scenarioActuel&&etat.scenarioActuel.coupe){
-    const [poule,demi,finale]=etat.matchsResultats.slice(0,3).map(m=>m.reussi);
     const nomC=etat.scenarioActuel.coupe.nom, avec=aPays(etat)?__(' avec ')+nomPays(etat):'';
-    if(poule&&demi&&finale){ medaille='or'; etat.distinctions.medailles=(etat.distinctions.medailles||0)+2; evenements.push(__t("Médaille d'or — {#0}{#1} !",[nomC,avec])); }
-    else if(poule&&demi){ medaille='argent'; etat.distinctions.medailles=(etat.distinctions.medailles||0)+1; evenements.push(__t("Médaille d'argent — {#0}{#1}",[nomC,avec])); }
-    else if(demi||(poule&&Math.random()<0.4)){ medaille='bronze'; etat.distinctions.medailles=(etat.distinctions.medailles||0)+1; evenements.push(__t("Médaille de bronze — {#0}{#1}",[nomC,avec])); }
+    const issue=coupeIssue();
+    if(issue==='or'){ medaille='or'; etat.distinctions.medailles=(etat.distinctions.medailles||0)+2; evenements.push(__t("Médaille d'or — {#0}{#1} !",[nomC,avec])); }
+    else if(issue==='argent'){ medaille='argent'; etat.distinctions.medailles=(etat.distinctions.medailles||0)+1; evenements.push(__t("Médaille d'argent — {#0}{#1}",[nomC,avec])); }
+    else if(issue==='bronze'){ medaille='bronze'; etat.distinctions.medailles=(etat.distinctions.medailles||0)+1; evenements.push(__t("Médaille de bronze — {#0}{#1}",[nomC,avec])); }
+    else if(issue==='quatrieme') evenements.push(__t("Quatrième place — {#0}{#1}",[nomC,avec]));
+    else if(issue==='quart') evenements.push(__t("Éliminé en quarts de finale — {#0}{#1}",[nomC,avec]));
+    else evenements.push(__t("Éliminé en phase de groupes — {#0}{#1}",[nomC,avec]));
   }
   const reussis=etat.matchsResultats.filter(m=>m.reussi).length;
   const s=genererSaisonRegliere(reussis,etat.matchsResultats.length,moyenne);
@@ -562,6 +598,8 @@ function assainir(s){
   else s.rivaux=[];
   if(s.saisonSport&&typeof s.saisonSport==='object'){ const q=s.saisonSport; s.saisonSport={v:num(q.v,0,82,41),d:num(q.d,0,82,41),rang:num(q.rang,1,15,8),qualifie:num(q.rang,1,15,8)<=8}; } else s.saisonSport=null;
   if(s.playoffs&&typeof s.playoffs==='object'){ s.playoffs={tour:num(s.playoffs.tour,0,3,0),resultats:(Array.isArray(s.playoffs.resultats)?s.playoffs.resultats:[]).slice(0,4).filter(r=>r&&typeof r==='object')}; } else s.playoffs=null;
+  if(s.matchActuel&&s.matchActuel.stade&&!['poule','quart','demi','bronze','finale'].includes(s.matchActuel.stade)) delete s.matchActuel.stade;
+  if(s.matchActuel&&s.matchActuel.rangC!==undefined) s.matchActuel.rangC=num(s.matchActuel.rangC,0,8,0);
   if(s.matchActuel){ s.matchActuel.playoff=!!s.matchActuel.playoff; s.matchActuel.tour=num(s.matchActuel.tour,0,3,0); }
   if(!Array.isArray(s.evenementsSaison)) s.evenementsSaison=null; else s.evenementsSaison=s.evenementsSaison.slice(0,8).map(x=>String(x).slice(0,120));
   const t=s.matchActuel&&s.matchActuel.tableau;
