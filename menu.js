@@ -112,3 +112,18 @@ function monterBoutonMenu(){
   document.body.appendChild(b);
 }
 document.addEventListener('keydown',ev=>{ if(ev.key==='Escape') fermerMenu(); });
+
+/* Barre du bas : recommencer et menu, visibles sur tous les écrans de jeu */
+function monterBarreBas(){
+  const old=document.getElementById('barre-bas'); if(old) old.remove();
+  const app=document.getElementById('app'); if(!app||!etat) return;
+  const el=document.createElement('div'); el.id='barre-bas';
+  el.innerHTML=`<button type="button" id="bb-recommencer" class="bb-btn">${escapeHtml(__('Recommencer'))}</button><button type="button" id="bb-menu" class="bb-btn">${escapeHtml(__('Menu'))}</button>`;
+  app.appendChild(el);
+  const r=el.querySelector('#bb-recommencer'); let conf=false;
+  r.onclick=()=>{
+    if(enCours()&&!conf){ conf=true; r.textContent=__("Confirmer : la progression sera perdue"); r.classList.add('bb-alerte'); return; }
+    reinitialiser(); accueilVu=true; render();
+  };
+  el.querySelector('#bb-menu').onclick=()=>{ Son.clic(); ouvrirMenu(); };
+}

@@ -327,7 +327,7 @@ function attacherRetraite(){
 }
 
 function render(){
-  try{ renderEcran(); monterBoutonSon(); monterBoutonLangue(); monterBoutonMenu(); animerCompteurs(); }
+  try{ renderEcran(); monterBoutonSon(); monterBoutonLangue(); monterBoutonMenu(); monterBarreBas(); animerCompteurs(); }
   catch(e){
     try{ localStorage.removeItem(SAVE_KEY); }catch(_){}
     etat=null;
